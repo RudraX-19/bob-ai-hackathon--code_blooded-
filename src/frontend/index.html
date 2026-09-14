@@ -1,2204 +1,502 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Port Pulse — Container Congestion Predictor</title>
-
+  <title>Port Pulse — Real-Time Indian Port Monitor</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-
   <style>
-    /* =========================================================
-       PORT PULSE — MODERN UI
-       Palette:
-       Teal    #00916E
-       Cream   #FEEFE5
-       Yellow  #FFCF00
-       Orange  #EE6123
-       Red     #FA003F
-    ========================================================= */
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    :root {
-      --teal: #00916E;
-      --teal-dark: #006F55;
-      --cream: #FEEFE5;
-      --yellow: #FFCF00;
-      --orange: #EE6123;
-      --red: #FA003F;
-
-      --ink: #17211f;
-      --ink-soft: #3f4b47;
-      --muted: #74807b;
-
-      --white: #ffffff;
-      --surface: #fffaf7;
-      --border: #eadfd7;
-      --border-dark: #d9cbc1;
-
-      --shadow-sm: 0 2px 10px rgba(35, 27, 22, .06);
-      --shadow-md: 0 10px 30px rgba(35, 27, 22, .08);
-      --shadow-lg: 0 20px 50px rgba(35, 27, 22, .10);
-
-      --radius-sm: 10px;
-      --radius: 16px;
-      --radius-lg: 22px;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      background: var(--cream);
-      color: var(--ink);
-      font-family:
-        Inter,
-        ui-sans-serif,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-      font-size: 14px;
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-
-    button {
-      font: inherit;
-    }
-
-    /* =========================================================
-       HEADER
-    ========================================================= */
-
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-
-      height: 72px;
-      padding: 0 32px;
-
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-
-      background: rgba(255, 250, 247, .94);
-      backdrop-filter: blur(18px);
-
-      border-bottom: 1px solid rgba(234, 223, 215, .9);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-icon {
-      width: 40px;
-      height: 40px;
-
-      display: grid;
-      place-items: center;
-
-      border-radius: 12px;
-
-      background: var(--teal);
-      color: white;
-
-      font-size: 20px;
-
-      box-shadow: 0 6px 18px rgba(0, 145, 110, .25);
-    }
-
-    .logo {
-      font-size: 19px;
-      font-weight: 800;
-      letter-spacing: -.5px;
-    }
-
-    .logo span {
-      color: var(--teal);
-    }
-
-    .brand-subtitle {
-      color: var(--muted);
-      font-size: 11px;
-      margin-top: -3px;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    #wx-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-
-      padding: 7px 11px;
-
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-
-      padding: 7px 12px;
-
-      background: var(--ink);
-      color: white;
-
-      border-radius: 999px;
-
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: .3px;
-    }
-
-    /* =========================================================
-       MAIN
-    ========================================================= */
-
-    main {
-      width: min(1380px, calc(100% - 40px));
-      margin: 0 auto;
-      padding: 34px 0 50px;
-    }
-
-    .hero {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 20px;
-
-      margin-bottom: 28px;
-    }
-
-    .hero h1 {
-      font-size: clamp(28px, 4vw, 44px);
-      line-height: 1.05;
-      letter-spacing: -1.7px;
-      font-weight: 850;
-    }
-
-    .hero h1 span {
-      color: var(--teal);
-    }
-
-    .hero p {
-      max-width: 620px;
-      margin-top: 9px;
-
-      color: var(--ink-soft);
-      font-size: 14px;
-    }
-
-    .live-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      padding: 10px 14px;
-
-      background: rgba(0,145,110,.08);
-      border: 1px solid rgba(0,145,110,.18);
-      border-radius: 12px;
-
-      color: var(--teal-dark);
-      font-size: 12px;
-      font-weight: 700;
-
-      white-space: nowrap;
-    }
-
-    .live-dot {
-      width: 8px;
-      height: 8px;
-
-      background: var(--teal);
-      border-radius: 50%;
-
-      box-shadow: 0 0 0 5px rgba(0,145,110,.10);
-
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: .45;
-      }
-    }
-
-    /* =========================================================
-       SECTION LABELS
-    ========================================================= */
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-
-      margin: 30px 0 13px;
-    }
-
-    .section-title {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: .9px;
-      color: var(--ink);
-    }
-
-    .section-title::before {
-      content: "";
-      width: 5px;
-      height: 18px;
-      border-radius: 10px;
-      background: var(--teal);
-    }
-
-    /* =========================================================
-       KPI CARDS
-    ========================================================= */
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 13px;
-    }
-
-    .sc {
-      position: relative;
-      overflow: hidden;
-
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-
-      padding: 19px;
-
-      box-shadow: var(--shadow-sm);
-
-      transition:
-        transform .2s ease,
-        box-shadow .2s ease;
-    }
-
-    .sc:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-md);
-    }
-
-    .sc::after {
-      content: "";
-
-      position: absolute;
-      width: 70px;
-      height: 70px;
-
-      right: -30px;
-      bottom: -30px;
-
-      border-radius: 50%;
-
-      background: rgba(0,145,110,.07);
-    }
-
-    .sc .lbl {
-      color: var(--muted);
-
-      font-size: 10px;
-      font-weight: 800;
-
-      text-transform: uppercase;
-      letter-spacing: .7px;
-
-      margin-bottom: 9px;
-    }
-
-    .sc .val {
-      font-size: 32px;
-      font-weight: 850;
-      line-height: 1;
-      letter-spacing: -1px;
-    }
-
-    .sc .sub {
-      margin-top: 7px;
-
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .c-teal {
-      color: var(--teal);
-    }
-
-    .c-red {
-      color: var(--red);
-    }
-
-    .c-orange {
-      color: var(--orange);
-    }
-
-    .c-yellow {
-      color: #b48600;
-    }
-
-    /* =========================================================
-       TERMINALS
-    ========================================================= */
-
-    .terminal-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-    }
-
-    .t-card {
-      position: relative;
-
-      background: var(--white);
-      border: 1px solid var(--border);
-
-      border-radius: var(--radius-lg);
-
-      padding: 21px;
-
-      box-shadow: var(--shadow-sm);
-
-      transition:
-        transform .2s ease,
-        box-shadow .2s ease;
-    }
-
-    .t-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-md);
-    }
-
-    .t-card.CRITICAL {
-      border-top: 4px solid var(--red);
-    }
-
-    .t-card.HIGH {
-      border-top: 4px solid var(--orange);
-    }
-
-    .t-card.MEDIUM {
-      border-top: 4px solid var(--yellow);
-    }
-
-    .t-card.LOW {
-      border-top: 4px solid var(--teal);
-    }
-
-    .t-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-
-      margin-bottom: 12px;
-    }
-
-    .t-name {
-      font-size: 17px;
-      font-weight: 800;
-      letter-spacing: -.3px;
-    }
-
-    .score-wrap {
-      text-align: right;
-    }
-
-    .t-score {
-      font-size: 30px;
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .score-label {
-      color: var(--muted);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-
-      font-size: 9px;
-      font-weight: 850;
-
-      padding: 5px 9px;
-
-      border-radius: 999px;
-
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .pill-CRITICAL {
-      background: rgba(250,0,63,.09);
-      color: var(--red);
-    }
-
-    .pill-HIGH {
-      background: rgba(238,97,35,.11);
-      color: var(--orange);
-    }
-
-    .pill-MEDIUM {
-      background: rgba(255,207,0,.18);
-      color: #987400;
-    }
-
-    .pill-LOW {
-      background: rgba(0,145,110,.10);
-      color: var(--teal-dark);
-    }
-
-    .bar-bg {
-      width: 100%;
-      height: 8px;
-
-      margin: 14px 0;
-
-      background: #f0e7e1;
-      border-radius: 999px;
-
-      overflow: hidden;
-    }
-
-    .bar {
-      height: 100%;
-      border-radius: inherit;
-
-      transition: width .8s ease;
-    }
-
-    .t-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-
-      padding: 12px 0;
-
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-
-      font-size: 12px;
-    }
-
-    .t-stat .k {
-      color: var(--muted);
-      font-size: 10px;
-      margin-bottom: 2px;
-    }
-
-    .t-stat .v {
-      font-weight: 750;
-    }
-
-    .t-factors {
-      margin-top: 11px;
-    }
-
-    .factor-tag {
-      display: inline-block;
-
-      font-size: 9px;
-      font-weight: 650;
-
-      background: var(--cream);
-      border: 1px solid #ead8cc;
-
-      color: var(--ink-soft);
-
-      border-radius: 999px;
-
-      padding: 4px 8px;
-      margin: 2px;
-    }
-
-    .t-action {
-      margin-top: 13px;
-      padding: 11px 12px;
-
-      background: #f8f4f1;
-      border-radius: 10px;
-
-      color: var(--ink-soft);
-      font-size: 11px;
-      line-height: 1.5;
-    }
-
-    /* =========================================================
-       PANELS / CHARTS
-    ========================================================= */
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .panel {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .panel-title {
-      font-size: 14px;
-      font-weight: 800;
-      margin-bottom: 17px;
-    }
-
-    .chart-container {
-      height: 270px;
-      position: relative;
-    }
-
-    /* =========================================================
-       TABLES
-    ========================================================= */
-
-    .table-panel {
-      padding: 0;
-      overflow: hidden;
-      margin-bottom: 20px;
-    }
-
-    .table-head {
-      padding: 18px 20px;
-
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-
-      border-bottom: 1px solid var(--border);
-    }
-
-    .table-title {
-      font-size: 14px;
-      font-weight: 800;
-    }
-
-    .table-subtitle {
-      color: var(--muted);
-      font-size: 10px;
-      margin-top: 2px;
-    }
-
-    .tbl-wrap {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      min-width: 850px;
-    }
-
-    th {
-      background: #faf6f3;
-
-      color: var(--muted);
-
-      font-size: 9px;
-      font-weight: 800;
-
-      text-transform: uppercase;
-      letter-spacing: .65px;
-
-      padding: 11px 15px;
-
-      text-align: left;
-
-      border-bottom: 1px solid var(--border);
-    }
-
-    td {
-      padding: 12px 15px;
-
-      border-bottom: 1px solid #f0e7e1;
-
-      vertical-align: middle;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    tbody tr {
-      transition: background .15s ease;
-    }
-
-    tbody tr:hover {
-      background: #fffbf8;
-    }
-
-    .vessel-name {
-      font-weight: 750;
-    }
-
-    .vessel-id {
-      color: var(--muted);
-      font-size: 10px;
-      margin-top: 1px;
-    }
-
-    .hazmat {
-      color: var(--red);
-      font-weight: 800;
-      font-size: 10px;
-    }
-
-    .safe {
-      color: var(--teal);
-      font-weight: 700;
-    }
-
-    /* =========================================================
-       BUTTONS
-    ========================================================= */
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-
-      background: var(--teal);
-      color: white;
-
-      border: none;
-      border-radius: 10px;
-
-      padding: 9px 15px;
-
-      font-size: 12px;
-      font-weight: 800;
-
-      cursor: pointer;
-
-      transition:
-        transform .15s ease,
-        background .15s ease,
-        box-shadow .15s ease;
-    }
-
-    .btn:hover {
-      background: var(--teal-dark);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(0,145,110,.22);
-    }
-
-    .btn:active {
-      transform: translateY(0);
-    }
-
-    .btn:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .btn-sm {
-      padding: 7px 11px;
-      font-size: 11px;
-    }
-
-    /* =========================================================
-       AI PLAN
-    ========================================================= */
-
-    .ai-panel {
-      position: relative;
-      overflow: hidden;
-
-      background:
-        linear-gradient(
-          135deg,
-          #fff 0%,
-          #fff8f2 100%
-        );
-
-      border: 1px solid var(--border);
-
-      border-radius: var(--radius-lg);
-
-      padding: 22px;
-
-      box-shadow: var(--shadow-md);
-    }
-
-    .ai-panel::before {
-      content: "";
-
-      position: absolute;
-
-      width: 180px;
-      height: 180px;
-
-      right: -70px;
-      top: -80px;
-
-      border-radius: 50%;
-
-      background: rgba(0,145,110,.07);
-    }
-
-    .ai-header {
-      position: relative;
-
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-
-      gap: 15px;
-
-      margin-bottom: 16px;
-    }
-
-    .ai-title-wrap {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-    }
-
-    .ai-icon {
-      width: 38px;
-      height: 38px;
-
-      display: grid;
-      place-items: center;
-
-      background: var(--yellow);
-      border-radius: 11px;
-
-      font-size: 18px;
-    }
-
-    .ai-title {
-      font-size: 15px;
-      font-weight: 850;
-    }
-
-    .ai-label {
-      display: block;
-
-      color: var(--teal);
-
-      font-size: 9px;
-      font-weight: 800;
-
-      text-transform: uppercase;
-      letter-spacing: .6px;
-    }
-
-    #plan-box {
-      position: relative;
-
-      background: var(--ink);
-      color: #eef6f3;
-
-      border-radius: 13px;
-
-      padding: 19px;
-
-      white-space: pre-wrap;
-
-      font-family:
-        "SFMono-Regular",
-        Consolas,
-        monospace;
-
-      font-size: 11px;
-      line-height: 1.75;
-
-      max-height: 480px;
-      overflow-y: auto;
-
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.05);
-    }
-
-    /* =========================================================
-       SPINNER
-    ========================================================= */
-
-    .spinner {
-      display: inline-block;
-
-      width: 13px;
-      height: 13px;
-
-      border: 2px solid rgba(255,255,255,.35);
-      border-top-color: white;
-
-      border-radius: 50%;
-
-      animation: spin .7s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* =========================================================
-       EMPTY / LOADING
-    ========================================================= */
-
-    .loading {
-      color: var(--muted);
-      text-align: center;
-      padding: 30px;
-    }
-
-    /* =========================================================
-       FOOTER
-    ========================================================= */
-
-    footer {
-      text-align: center;
-
-      padding: 25px 20px;
-
-      color: var(--muted);
-
-      font-size: 10px;
-
-      border-top: 1px solid var(--border);
-    }
-
-    footer strong {
-      color: var(--teal-dark);
-    }
-
-    /* =========================================================
-       RESPONSIVE
-    ========================================================= */
-
-    @media (max-width: 1100px) {
-      .summary-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-
-      .terminal-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 800px) {
-      header {
-        padding: 0 17px;
-      }
-
-      .brand-subtitle,
-      .badge {
-        display: none;
-      }
-
-      main {
-        width: min(100% - 28px, 680px);
-        padding-top: 24px;
-      }
-
-      .hero {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .summary-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .terminal-grid,
-      .row {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 500px) {
-      header {
-        height: 64px;
-      }
-
-      .header-right {
-        gap: 5px;
-      }
-
-      #wx-status {
-        font-size: 9px;
-        padding: 6px 8px;
-      }
-
-      .summary-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 9px;
-      }
-
-      .sc {
-        padding: 15px;
-      }
-
-      .sc .val {
-        font-size: 26px;
-      }
-
-      .terminal-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .ai-header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .ai-header .btn {
-        width: 100%;
-      }
-    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0d1117;--surface:#161b22;--card:#1c2129;--border:#30363d;
+      --text:#e6edf3;--muted:#8b949e;
+      --critical:#f85149;--high:#d29922;--medium:#3fb950;--low:#58a6ff;--accent:#388bfd;
+    }
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.6;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+    /* ── header ── */
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:1000}
+    .logo{font-size:16px;font-weight:700}.logo span{color:var(--accent)}
+    .badge{background:#0d419d;color:#79c0ff;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid #1f6feb}
+    .header-right{display:flex;align-items:center;gap:10px}
+    #wx-status,#ais-status{font-size:11px;color:var(--muted);padding:2px 8px;border-radius:20px;border:1px solid var(--border)}
+
+    /* ── port selector ── */
+    .port-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 18px;display:flex;align-items:center;gap:8px;flex-shrink:0;overflow-x:auto}
+    .port-btn{background:var(--card);border:1px solid var(--border);color:var(--text);padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;white-space:nowrap;transition:all .15s}
+    .port-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .port-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+
+    /* ── main layout ── */
+    .main-layout{display:flex;flex:1;overflow:hidden}
+
+    /* ── left sidebar ── */
+    .sidebar{width:340px;min-width:300px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .sidebar-inner{flex:1;overflow-y:auto;padding:12px}
+
+    /* ── map ── */
+    #map{flex:1;z-index:1}
+
+    /* ── right panel ── */
+    .right-panel{width:320px;min-width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .right-inner{flex:1;overflow-y:auto;padding:12px}
+
+    /* ── summary cards ── */
+    .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+    .stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+    .stat .val{font-size:22px;font-weight:700;line-height:1.2}
+    .c-crit{color:var(--critical)}.c-high{color:var(--high)}.c-med{color:var(--medium)}.c-acc{color:var(--accent)}
+
+    /* ── section title ── */
+    .sec{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:12px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+
+    /* ── terminal cards ── */
+    .t-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px}
+    .t-card.CRITICAL{border-color:var(--critical)}
+    .t-card.HIGH{border-color:var(--high)}
+    .t-card.MEDIUM{border-color:rgba(63,185,80,.5)}
+    .t-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .t-name{font-size:13px;font-weight:600}
+    .t-score{font-size:20px;font-weight:800}
+    .bar-bg{background:var(--border);border-radius:3px;height:5px;width:100%;margin:6px 0}
+    .bar{height:5px;border-radius:3px}
+    .t-stats{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;margin-top:6px}
+    .t-stat .k{color:var(--muted)}.t-stat .v{font-weight:600}
+    .t-action{font-size:10px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+
+    /* ── vessel list ── */
+    .v-item{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:border-color .15s}
+    .v-item:hover{border-color:var(--accent)}
+    .v-item.moving{border-left:3px solid var(--medium)}
+    .v-item.anchored{border-left:3px solid var(--high)}
+    .v-name{font-weight:600;font-size:12px}
+    .v-meta{font-size:11px;color:var(--muted)}
+    .v-speed{font-size:11px;font-weight:600}
+
+    /* ── pill ── */
+    .pill{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;text-transform:uppercase}
+    .pill-CRITICAL{background:rgba(248,81,73,.15);color:var(--critical);border:1px solid rgba(248,81,73,.4)}
+    .pill-HIGH{background:rgba(210,153,34,.15);color:var(--high);border:1px solid rgba(210,153,34,.4)}
+    .pill-MEDIUM{background:rgba(63,185,80,.15);color:var(--medium);border:1px solid rgba(63,185,80,.4)}
+    .pill-LOW{background:rgba(88,166,255,.15);color:var(--low);border:1px solid rgba(88,166,255,.4)}
+
+    /* ── plan box ── */
+    #plan-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;white-space:pre-wrap;font-family:monospace;font-size:11px;line-height:1.6;color:#c9d1d9;max-height:300px;overflow-y:auto;margin-top:6px}
+
+    /* ── buttons ── */
+    .btn{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s;width:100%}
+    .btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+    .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── live dot ── */
+    .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--critical);animation:pulse 1.5s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* ── chart ── */
+    canvas{max-height:160px}
+
+    /* ── vessel info popup ── */
+    #vessel-popup{display:none;position:fixed;bottom:20px;left:360px;background:var(--card);border:1px solid var(--accent);border-radius:8px;padding:14px;z-index:2000;min-width:200px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+    #vessel-popup .close{position:absolute;top:6px;right:10px;cursor:pointer;color:var(--muted);font-size:16px}
+
+    .leaflet-container{background:#0d1117}
   </style>
 </head>
-
 <body>
 
 <header>
-  <div class="brand">
-
-    <div class="brand-icon">⚓</div>
-
-    <div>
-      <div class="logo">
-        Port <span>Pulse</span>
-      </div>
-
-      <div class="brand-subtitle">
-        AI Container Congestion Intelligence
-      </div>
-    </div>
-
-  </div>
-
+  <div class="logo">🚢 Port <span>Pulse</span> <span style="font-size:11px;color:var(--muted);font-weight:400">Real-Time</span></div>
   <div class="header-right">
-    <span id="wx-status">Checking...</span>
-
-    <span class="badge">
-      IBM BOB HACKATHON · 2026
-    </span>
+    <span id="ais-status"><span class="live-dot"></span> Connecting...</span>
+    <span id="wx-status">● mock mode</span>
+    <span class="badge">IBM Bob Hackathon 2026</span>
   </div>
 </header>
 
+<!-- Port selector bar -->
+<div class="port-bar" id="port-bar">
+  <span style="font-size:11px;color:var(--muted);white-space:nowrap">Select Port:</span>
+</div>
 
-<main>
+<div class="main-layout">
 
-  <!-- HERO -->
+  <!-- LEFT — Stats + Terminals + Vessel List -->
+  <div class="sidebar">
+    <div class="sidebar-inner">
 
-  <section class="hero">
-
-    <div>
-      <h1>
-        Port Operations<br>
-        <span>Command Center</span>
-      </h1>
-
-      <p>
-        Predict congestion, optimize berth allocation, and prepare
-        port operations before bottlenecks become costly delays.
-      </p>
-    </div>
-
-    <div class="live-indicator">
-      <span class="live-dot"></span>
-      Operations dashboard
-    </div>
-
-  </section>
-
-
-  <!-- KPI SUMMARY -->
-
-  <div class="section-header">
-    <div class="section-title">
-      Port Overview
-    </div>
-  </div>
-
-  <div class="summary-grid">
-
-    <div class="sc">
-      <div class="lbl">Incoming Vessels</div>
-      <div class="val c-teal" id="s-vessels">—</div>
-      <div class="sub">Next 24 hours</div>
-    </div>
-
-    <div class="sc">
-      <div class="lbl">Critical Terminals</div>
-      <div class="val c-red" id="s-critical">—</div>
-      <div class="sub">Immediate action needed</div>
-    </div>
-
-    <div class="sc">
-      <div class="lbl">Vessels Queued</div>
-      <div class="val c-orange" id="s-queued">—</div>
-      <div class="sub">Waiting for berth</div>
-    </div>
-
-    <div class="sc">
-      <div class="lbl">Total Berths</div>
-      <div class="val c-teal" id="s-berths">—</div>
-      <div class="sub">Across all terminals</div>
-    </div>
-
-    <div class="sc">
-      <div class="lbl">Berths Available</div>
-      <div class="val c-yellow" id="s-avail">—</div>
-      <div class="sub">Ready to assign</div>
-    </div>
-
-  </div>
-
-
-  <!-- TERMINAL CONGESTION -->
-
-  <div class="section-header">
-    <div class="section-title">
-      Terminal Congestion Status
-    </div>
-  </div>
-
-  <div class="terminal-grid" id="terminal-cards">
-
-    <div class="loading">
-      Loading terminal intelligence...
-    </div>
-
-  </div>
-
-
-  <!-- CHARTS -->
-
-  <div class="section-header">
-    <div class="section-title">
-      Traffic Intelligence
-    </div>
-  </div>
-
-  <div class="row">
-
-    <div class="panel">
-
-      <div class="panel-title">
-        Congestion Score by Terminal
+      <!-- Stats -->
+      <div class="stat-row">
+        <div class="stat"><div class="lbl">Live Vessels</div><div class="val c-acc" id="s-total">—</div></div>
+        <div class="stat"><div class="lbl">Anchored</div><div class="val c-high" id="s-anchored">—</div></div>
+        <div class="stat"><div class="lbl">Moving</div><div class="val c-med" id="s-moving">—</div></div>
+        <div class="stat"><div class="lbl">Critical Terms.</div><div class="val c-crit" id="s-critical">—</div></div>
       </div>
 
-      <div class="chart-container">
-        <canvas id="congestionChart"></canvas>
-      </div>
+      <!-- Terminal Congestion -->
+      <div class="sec">Terminal Congestion</div>
+      <div id="terminal-cards"><div style="color:var(--muted);font-size:12px">Loading...</div></div>
+
+      <!-- Vessel list -->
+      <div class="sec">Live Vessels <span id="vessel-count" style="color:var(--accent)"></span></div>
+      <div id="vessel-list"><div style="color:var(--muted);font-size:12px">Waiting for AIS data...</div></div>
 
     </div>
-
-
-    <div class="panel">
-
-      <div class="panel-title">
-        Incoming Vessel Load
-      </div>
-
-      <div class="chart-container">
-        <canvas id="vesselChart"></canvas>
-      </div>
-
-    </div>
-
   </div>
 
+  <!-- MAP -->
+  <div id="map"></div>
 
-  <!-- VESSEL SCHEDULE -->
+  <!-- RIGHT — Chart + Plan -->
+  <div class="right-panel">
+    <div class="right-inner">
 
-  <div class="panel table-panel">
+      <div class="sec">Congestion Overview</div>
+      <canvas id="congestionChart"></canvas>
 
-    <div class="table-head">
-
-      <div>
-        <div class="table-title">
-          Incoming Vessel Schedule
-        </div>
-
-        <div class="table-subtitle">
-          Prioritized vessel arrivals and cargo information
-        </div>
+      <div class="sec" style="margin-top:16px">AI Operations Plan
+        <span style="color:var(--accent);font-size:9px">(watsonx.ai)</span>
       </div>
-
-      <button
-        class="btn btn-sm"
-        onclick="loadAll()"
-        id="refresh-btn"
-      >
-        ↻ Refresh
-      </button>
+      <button class="btn" onclick="loadPlan()" id="plan-btn">Generate 72-Hour Plan</button>
+      <div id="plan-box">Click above to generate an AI-powered operations plan for this port.</div>
 
     </div>
-
-    <div class="tbl-wrap">
-
-      <table>
-
-        <thead>
-          <tr>
-            <th>Vessel</th>
-            <th>Type</th>
-            <th>Origin</th>
-            <th>ETA</th>
-            <th>TEU</th>
-            <th>Priority</th>
-            <th>Destination</th>
-            <th>Hazmat</th>
-          </tr>
-        </thead>
-
-        <tbody id="vessel-tbody">
-
-          <tr>
-            <td
-              colspan="8"
-              class="loading"
-            >
-              Loading vessel schedule...
-            </td>
-          </tr>
-
-        </tbody>
-
-      </table>
-
-    </div>
-
   </div>
 
+</div>
 
-  <!-- BERTH ASSIGNMENT -->
-
-  <div class="panel table-panel">
-
-    <div class="table-head">
-
-      <div>
-        <div class="table-title">
-          Berth Assignment Plan
-        </div>
-
-        <div class="table-subtitle">
-          AI-assisted berth allocation and expected waiting time
-        </div>
-      </div>
-
-    </div>
-
-    <div class="tbl-wrap">
-
-      <table>
-
-        <thead>
-          <tr>
-            <th>Vessel</th>
-            <th>TEU</th>
-            <th>Assigned Berth</th>
-            <th>Terminal</th>
-            <th>Start</th>
-            <th>Complete</th>
-            <th>Cranes</th>
-            <th>Wait</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-
-        <tbody id="assign-tbody">
-
-          <tr>
-            <td
-              colspan="9"
-              class="loading"
-            >
-              Loading berth assignments...
-            </td>
-          </tr>
-
-        </tbody>
-
-      </table>
-
-    </div>
-
-  </div>
-
-
-  <!-- AI OPERATIONS PLAN -->
-
-  <section class="ai-panel">
-
-    <div class="ai-header">
-
-      <div class="ai-title-wrap">
-
-        <div class="ai-icon">
-          ✦
-        </div>
-
-        <div>
-
-          <span class="ai-label">
-            AI Operations Intelligence
-          </span>
-
-          <div class="ai-title">
-            72-Hour Port Operations Plan
-          </div>
-
-        </div>
-
-      </div>
-
-      <button
-        class="btn"
-        onclick="loadPlan()"
-        id="plan-btn"
-      >
-        ✦ Generate 72-Hour Plan
-      </button>
-
-    </div>
-
-    <div id="plan-box">
-Click "Generate 72-Hour Plan" to generate an AI-powered
-port operations and crew pre-positioning strategy.
-    </div>
-
-  </section>
-
-</main>
-
-
-<footer>
-
-  <strong>Port Pulse</strong>
-  &nbsp;·&nbsp;
-  L1 Container Congestion Predictor
-  &nbsp;·&nbsp;
-  IBM BOB AI Innovation Hackathon 2026
-  &nbsp;·&nbsp;
-  Team Code Blooded
-
-</footer>
-
+<!-- Vessel popup -->
+<div id="vessel-popup">
+  <span class="close" onclick="document.getElementById('vessel-popup').style.display='none'">✕</span>
+  <div id="popup-content"></div>
+</div>
 
 <script>
+const API = '';
+const WS_URL = `ws://${location.host}/ws`;
 
-  const API = '';
+// State
+let vessels = {};       // mmsi -> vessel
+let markers = {};       // mmsi -> leaflet marker
+let paths = {};         // mmsi -> leaflet polyline
+let vesselTrails = {};  // mmsi -> [[lat,lon], ...]
+let map, cChart;
+let activePort = 'JNPT';
+let ports = [];
 
-  let cChart = null;
-  let vChart = null;
+// ── Map setup ──────────────────────────────────────────────────────────────
+function initMap(lat, lon) {
+  if (map) { map.setView([lat, lon], 12); return; }
+  map = L.map('map', { zoomControl: true }).setView([lat, lon], 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO',
+    maxZoom: 19
+  }).addTo(map);
+}
 
+// ── Ship icon ──────────────────────────────────────────────────────────────
+function shipIcon(speed, heading) {
+  const color = speed <= 0.5 ? '#d29922' : '#3fb950';
+  const rot = heading || 0;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 20 28">
+    <g transform="rotate(${rot},10,14)">
+      <polygon points="10,0 18,24 10,20 2,24" fill="${color}" stroke="#000" stroke-width="1.5" opacity="0.9"/>
+    </g>
+  </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [20, 28],
+    iconAnchor: [10, 14]
+  });
+}
 
-  /* =========================================================
-     COLORS
-  ========================================================= */
+// ── Update/add vessel marker ───────────────────────────────────────────────
+function updateVesselOnMap(v) {
+  const lat = v.lat, lon = v.lon, mmsi = v.mmsi;
+  if (!lat || !lon) return;
 
-  const COLORS = {
-    teal: '#00916E',
-    yellow: '#FFCF00',
-    orange: '#EE6123',
-    red: '#FA003F',
-    ink: '#17211f',
-    muted: '#74807b',
-    grid: '#eadfd7'
+  // Trail
+  if (!vesselTrails[mmsi]) vesselTrails[mmsi] = [];
+  vesselTrails[mmsi].push([lat, lon]);
+  if (vesselTrails[mmsi].length > 30) vesselTrails[mmsi].shift();
+
+  // Update path
+  if (paths[mmsi]) {
+    map.removeLayer(paths[mmsi]);
+  }
+  if (vesselTrails[mmsi].length > 1) {
+    paths[mmsi] = L.polyline(vesselTrails[mmsi], {
+      color: v.speed <= 0.5 ? '#d29922' : '#388bfd',
+      weight: 1.5,
+      opacity: 0.5,
+      dashArray: '4,4'
+    }).addTo(map);
+  }
+
+  // Marker
+  const icon = shipIcon(v.speed, v.heading);
+  if (markers[mmsi]) {
+    markers[mmsi].setLatLng([lat, lon]).setIcon(icon);
+    markers[mmsi]._popup && markers[mmsi]._popup.setContent(popupHtml(v));
+  } else {
+    const m = L.marker([lat, lon], { icon })
+      .addTo(map)
+      .bindPopup(popupHtml(v), { maxWidth: 220 });
+    m.on('click', () => showVesselCard(v));
+    markers[mmsi] = m;
+  }
+}
+
+function popupHtml(v) {
+  const status = v.speed <= 0.5 ? '⚓ Anchored' : `🟢 Moving ${v.speed} kn`;
+  return `<div style="font-family:system-ui;font-size:12px;color:#1f2328">
+    <b>${v.name || 'Unknown'}</b><br>
+    MMSI: ${v.mmsi}<br>
+    ${status}<br>
+    Heading: ${v.heading || 0}°
+  </div>`;
+}
+
+function showVesselCard(v) {
+  const status = v.speed <= 0.5 ? '⚓ Anchored' : `🟢 Moving ${v.speed} kn`;
+  document.getElementById('popup-content').innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:6px">${v.name || 'Unknown Vessel'}</div>
+    <div style="font-size:11px;color:#8b949e">MMSI: ${v.mmsi}</div>
+    <div style="font-size:12px;margin-top:6px">${status}</div>
+    <div style="font-size:11px;color:#8b949e">Lat: ${v.lat?.toFixed(4)} | Lon: ${v.lon?.toFixed(4)}</div>
+    <div style="font-size:11px;color:#8b949e">Heading: ${v.heading || 0}° | Type: ${v.type || '—'}</div>
+    ${v.destination ? `<div style="font-size:11px;color:#8b949e">Dest: ${v.destination}</div>` : ''}
+  `;
+  document.getElementById('vessel-popup').style.display = 'block';
+}
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+let ws, wsReconnectTimer;
+
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    document.getElementById('ais-status').innerHTML = '<span class="live-dot"></span> Live AIS';
+    document.getElementById('ais-status').style.color = '#3fb950';
+    clearTimeout(wsReconnectTimer);
   };
 
-
-  function congColor(level) {
-
-    return {
-      CRITICAL: COLORS.red,
-      HIGH: COLORS.orange,
-      MEDIUM: COLORS.yellow,
-      LOW: COLORS.teal
-    }[level] || COLORS.muted;
-
-  }
-
-
-  /* =========================================================
-     LOAD EVERYTHING
-  ========================================================= */
-
-  async function loadAll() {
-
-    const refreshBtn =
-      document.getElementById('refresh-btn');
-
-    refreshBtn.disabled = true;
-
-    refreshBtn.innerHTML =
-      '<span class="spinner"></span> Loading';
-
-
-    try {
-
-      const [
-        vessels,
-        berths,
-        cong,
-        assigns
-      ] = await Promise.all([
-
-        fetch(`${API}/api/vessels`).then(r => r.json()),
-
-        fetch(`${API}/api/berths`).then(r => r.json()),
-
-        fetch(`${API}/api/congestion`).then(r => r.json()),
-
-        fetch(`${API}/api/assignments`).then(r => r.json())
-
-      ]);
-
-
-      renderSummary(
-        vessels,
-        berths,
-        assigns
-      );
-
-      renderTerminalCards(cong);
-
-      renderCharts(
-        cong,
-        vessels
-      );
-
-      renderVesselTable(vessels);
-
-      renderAssignTable(assigns);
-
-
-    } catch (e) {
-
-      document.getElementById(
-        'vessel-tbody'
-      ).innerHTML = `
-        <tr>
-          <td
-            colspan="8"
-            style="
-              color:${COLORS.red};
-              text-align:center;
-              padding:30px
-            "
-          >
-            ⚠ Backend unavailable.
-            Make sure the backend is running on port 8000.
-          </td>
-        </tr>
-      `;
-
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'snapshot') {
+      msg.data.forEach(v => { vessels[v.mmsi] = v; updateVesselOnMap(v); });
+      refreshSidebar();
+    } else if (msg.type === 'vessel_update') {
+      const v = msg.data;
+      vessels[v.mmsi] = v;
+      updateVesselOnMap(v);
+      updateVesselInList(v);
+      updateSummaryCount();
+    } else if (msg.type === 'heartbeat') {
+      document.getElementById('s-total').textContent = msg.vessels;
+    } else if (msg.type === 'port_switched') {
+      const p = msg.data.port;
+      map.setView([p.lat, p.lon], 12);
+      vessels = {}; markers = {}; paths = {}; vesselTrails = {};
+      map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline) map.removeLayer(l); });
+      refreshSidebar();
     }
+  };
 
+  ws.onclose = () => {
+    document.getElementById('ais-status').innerHTML = '<span style="color:#f85149">● Disconnected</span>';
+    wsReconnectTimer = setTimeout(connectWS, 3000);
+  };
 
-    refreshBtn.disabled = false;
+  ws.onerror = () => ws.close();
+}
 
-    refreshBtn.textContent = '↻ Refresh';
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function refreshSidebar() {
+  updateSummaryCount();
+  renderVesselList();
+  loadCongestion();
+}
 
+function updateSummaryCount() {
+  const list = Object.values(vessels);
+  const moving   = list.filter(v => v.speed > 0.5).length;
+  const anchored = list.filter(v => v.speed <= 0.5).length;
+  document.getElementById('s-total').textContent    = list.length;
+  document.getElementById('s-moving').textContent   = moving;
+  document.getElementById('s-anchored').textContent = anchored;
+  document.getElementById('vessel-count').textContent = `(${list.length})`;
+}
+
+function renderVesselList() {
+  const list = Object.values(vessels).sort((a,b) => b.speed - a.speed);
+  const el = document.getElementById('vessel-list');
+  if (!list.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">No vessels detected yet — waiting for AIS data...</div>'; return; }
+  el.innerHTML = list.slice(0, 30).map(v => {
+    const cls = v.speed <= 0.5 ? 'anchored' : 'moving';
+    const status = v.speed <= 0.5 ? `⚓ Anchored` : `▶ ${v.speed} kn`;
+    return `<div class="v-item ${cls}" onclick="flyToVessel('${v.mmsi}')">
+      <div style="display:flex;justify-content:space-between">
+        <div class="v-name">${v.name || 'Unknown'}</div>
+        <div class="v-speed" style="color:${v.speed<=0.5?'var(--high)':'var(--medium)'}">${status}</div>
+      </div>
+      <div class="v-meta">MMSI: ${v.mmsi} | Hdg: ${v.heading||0}°</div>
+    </div>`;
+  }).join('');
+}
+
+function updateVesselInList(v) {
+  // Debounce full re-render every 5 seconds
+  if (!updateVesselInList._timer) {
+    updateVesselInList._timer = setTimeout(() => {
+      renderVesselList();
+      updateVesselInList._timer = null;
+    }, 5000);
   }
-
-
-  /* =========================================================
-     SUMMARY
-  ========================================================= */
-
-  function renderSummary(
-    vessels,
-    berths,
-    assigns
-  ) {
-
-    document.getElementById(
-      's-vessels'
-    ).textContent = vessels.length;
-
-
-    document.getElementById(
-      's-berths'
-    ).textContent = berths.length;
-
-
-    document.getElementById(
-      's-avail'
-    ).textContent =
-      berths.filter(
-        b => b.status === 'AVAILABLE'
-      ).length;
-
-
-    document.getElementById(
-      's-queued'
-    ).textContent =
-      assigns.filter(
-        a => a.assigned_berth === 'QUEUED'
-      ).length;
-
-  }
-
-
-  /* =========================================================
-     TERMINAL CARDS
-  ========================================================= */
-
-  function renderTerminalCards(cong) {
-
-    let critCount = 0;
-
-
-    const html = cong.map(t => {
-
-      if (
-        t.congestion_level === 'CRITICAL'
-      ) {
-        critCount++;
-      }
-
-
-      const col =
-        congColor(
-          t.congestion_level
-        );
-
-
-      const factors =
-        (t.risk_factors || [])
-          .map(
-            f =>
-              `<span class="factor-tag">${f}</span>`
-          )
-          .join('');
-
-
-      const queueColor =
-        t.queue_size > 0
-          ? COLORS.red
-          : COLORS.teal;
-
-
-      return `
-
-        <div class="t-card ${t.congestion_level}">
-
-          <div class="t-header">
-
-            <div class="t-name">
-              ${t.terminal}
-            </div>
-
-            <div class="score-wrap">
-
-              <div
-                class="t-score"
-                style="color:${col}"
-              >
-                ${t.congestion_score}
-              </div>
-
-              <div class="score-label">
-                risk score
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <span class="pill pill-${t.congestion_level}">
-            ${t.congestion_level}
-          </span>
-
-
-          <div class="bar-bg">
-
-            <div
-              class="bar"
-              style="
-                width:${t.congestion_score}%;
-                background:${col}
-              "
-            ></div>
-
-          </div>
-
-
-          <div class="t-stats">
-
-            <div class="t-stat">
-              <div class="k">Incoming</div>
-              <div class="v">
-                ${t.vessels_incoming} vessels
-              </div>
-            </div>
-
-
-            <div class="t-stat">
-              <div class="k">Available berths</div>
-              <div class="v">
-                ${t.berths_available}/${t.berths_total}
-              </div>
-            </div>
-
-
-            <div class="t-stat">
-              <div class="k">Queue</div>
-              <div
-                class="v"
-                style="color:${queueColor}"
-              >
-                ${t.queue_size} waiting
-              </div>
-            </div>
-
-
-            <div class="t-stat">
-              <div class="k">Estimated wait</div>
-              <div class="v">
-                ${t.estimated_wait_hours}h
-              </div>
-            </div>
-
-          </div>
-
-
-          <div class="t-factors">
-            ${factors}
-          </div>
-
-
-          <div class="t-action">
-            <strong>Recommended:</strong>
-            ${t.recommended_action}
-          </div>
-
-        </div>
-
-      `;
-
-    }).join('');
-
-
-    document.getElementById(
-      'terminal-cards'
-    ).innerHTML = html;
-
-
-    document.getElementById(
-      's-critical'
-    ).textContent = critCount;
-
-  }
-
-
-  /* =========================================================
-     CHARTS
-  ========================================================= */
-
-  function renderCharts(
-    cong,
-    vessels
-  ) {
-
-    if (cChart) {
-      cChart.destroy();
+}
+
+function flyToVessel(mmsi) {
+  const v = vessels[mmsi];
+  if (!v) return;
+  map.flyTo([v.lat, v.lon], 14, { duration: 1 });
+  showVesselCard(v);
+}
+
+// ── Terminal congestion ────────────────────────────────────────────────────
+async function loadCongestion() {
+  try {
+    const data = await fetch(`${API}/api/congestion`).then(r => r.json());
+    renderTerminalCards(data);
+    renderCongestionChart(data);
+    const crit = data.filter(t => t.congestion_level === 'CRITICAL').length;
+    document.getElementById('s-critical').textContent = crit;
+  } catch(e) {}
+}
+
+function congColor(level) {
+  return {CRITICAL:'#f85149',HIGH:'#d29922',MEDIUM:'#3fb950',LOW:'#58a6ff'}[level]||'#8b949e';
+}
+
+function renderTerminalCards(data) {
+  document.getElementById('terminal-cards').innerHTML = data.map(t => {
+    const col = congColor(t.congestion_level);
+    return `<div class="t-card ${t.congestion_level}">
+      <div class="t-header">
+        <div class="t-name">${t.terminal}</div>
+        <div class="t-score" style="color:${col}">${t.congestion_score}</div>
+      </div>
+      <span class="pill pill-${t.congestion_level}">${t.congestion_level}</span>
+      <div class="bar-bg"><div class="bar" style="width:${t.congestion_score}%;background:${col}"></div></div>
+      <div class="t-stats">
+        <div class="t-stat"><div class="k">Vessels</div><div class="v">${t.vessels_incoming}</div></div>
+        <div class="t-stat"><div class="k">Anchored</div><div class="v" style="color:${t.vessels_anchored>0?'var(--high)':'var(--muted)'}">${t.vessels_anchored}</div></div>
+        <div class="t-stat"><div class="k">Queue wait</div><div class="v">${t.estimated_wait_hours}h</div></div>
+        <div class="t-stat"><div class="k">Utilization</div><div class="v">${t.utilization_pct}%</div></div>
+      </div>
+      <div class="t-action">${t.recommended_action}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCongestionChart(data) {
+  if (cChart) cChart.destroy();
+  cChart = new Chart(document.getElementById('congestionChart'), {
+    type: 'bar',
+    data: {
+      labels: data.map(t => t.terminal.replace('Terminal ','T-').replace('International Container Transshipment Terminal','ICTT')),
+      datasets:[{
+        label:'Congestion',
+        data: data.map(t => t.congestion_score),
+        backgroundColor: data.map(t => congColor(t.congestion_level)),
+        borderRadius: 4,
+      }]
+    },
+    options:{
+      scales:{
+        x:{ticks:{color:'#8b949e',font:{size:9}},grid:{color:'#21262d'}},
+        y:{min:0,max:100,ticks:{color:'#8b949e'},grid:{color:'#21262d'}}
+      },
+      plugins:{legend:{display:false}}
     }
-
-
-    cChart = new Chart(
-      document.getElementById(
-        'congestionChart'
-      ),
-      {
-
-        type: 'bar',
-
-        data: {
-
-          labels:
-            cong.map(
-              t => t.terminal
-            ),
-
-          datasets: [{
-
-            label: 'Congestion Score',
-
-            data:
-              cong.map(
-                t => t.congestion_score
-              ),
-
-            backgroundColor:
-              cong.map(
-                t =>
-                  congColor(
-                    t.congestion_level
-                  )
-              ),
-
-            borderRadius: 7,
-
-            borderSkipped: false
-
-          }]
-
-        },
-
-        options: {
-
-          responsive: true,
-
-          maintainAspectRatio: false,
-
-          scales: {
-
-            x: {
-              ticks: {
-                color: COLORS.muted,
-                font: {
-                  size: 10,
-                  weight: '600'
-                }
-              },
-
-              grid: {
-                display: false
-              }
-            },
-
-            y: {
-
-              min: 0,
-
-              max: 100,
-
-              ticks: {
-                color: COLORS.muted,
-                font: {
-                  size: 10
-                }
-              },
-
-              grid: {
-                color: COLORS.grid
-              }
-
-            }
-
-          },
-
-          plugins: {
-
-            legend: {
-              display: false
-            },
-
-            tooltip: {
-
-              backgroundColor:
-                COLORS.ink,
-
-              titleFont: {
-                size: 11
-              },
-
-              bodyFont: {
-                size: 11
-              },
-
-              padding: 10,
-
-              cornerRadius: 8
-
-            }
-
-          }
-
-        }
-
-      }
-    );
-
-
-    /* Vessel count */
-
-    const terms =
-      [
-        ...new Set(
-          vessels.map(
-            v => v.destination_berth
-          )
-        )
-      ].sort();
-
-
-    const counts =
-      terms.map(
-        t =>
-          vessels.filter(
-            v =>
-              v.destination_berth === t
-          ).length
-      );
-
-
-    if (vChart) {
-      vChart.destroy();
-    }
-
-
-    vChart = new Chart(
-      document.getElementById(
-        'vesselChart'
-      ),
-      {
-
-        type: 'doughnut',
-
-        data: {
-
-          labels: terms,
-
-          datasets: [{
-
-            data: counts,
-
-            backgroundColor: [
-              COLORS.teal,
-              COLORS.yellow,
-              COLORS.orange,
-              COLORS.red
-            ],
-
-            borderColor:
-              '#ffffff',
-
-            borderWidth: 4
-
-          }]
-
-        },
-
-        options: {
-
-          responsive: true,
-
-          maintainAspectRatio: false,
-
-          cutout: '67%',
-
-          plugins: {
-
-            legend: {
-
-              position: 'bottom',
-
-              labels: {
-
-                color: COLORS.ink,
-
-                font: {
-                  size: 10,
-                  weight: '600'
-                },
-
-                padding: 16,
-
-                usePointStyle: true,
-
-                pointStyle: 'circle'
-
-              }
-
-            },
-
-            tooltip: {
-
-              backgroundColor:
-                COLORS.ink,
-
-              padding: 10,
-
-              cornerRadius: 8
-
-            }
-
-          }
-
-        }
-
-      }
-    );
-
+  });
+}
+
+// ── AI Plan ────────────────────────────────────────────────────────────────
+async function loadPlan() {
+  const btn = document.getElementById('plan-btn');
+  const box = document.getElementById('plan-box');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating...';
+  box.textContent = 'Calling IBM watsonx.ai...';
+  try {
+    const data = await fetch(`${API}/api/plan`).then(r => r.json());
+    box.textContent = data.plan_text;
+  } catch(e) {
+    box.textContent = 'Error connecting to backend.';
   }
+  btn.disabled = false;
+  btn.textContent = 'Regenerate Plan';
+}
 
+// ── Port selector ──────────────────────────────────────────────────────────
+async function loadPorts() {
+  ports = await fetch(`${API}/api/ports`).then(r => r.json());
+  const bar = document.getElementById('port-bar');
+  bar.innerHTML = '<span style="font-size:11px;color:var(--muted);white-space:nowrap">Select Port:</span>';
+  ports.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'port-btn' + (p.key === activePort ? ' active' : '');
+    btn.textContent = p.name.split('(')[0].trim().split(' ').slice(0,2).join(' ');
+    btn.title = `${p.name} — ${p.city}`;
+    btn.onclick = () => switchPort(p.key);
+    bar.appendChild(btn);
+  });
+}
 
-  /* =========================================================
-     VESSEL TABLE
-  ========================================================= */
-
-  function renderVesselTable(vessels) {
-
-    const pri = {
-      HIGH: 0,
-      MEDIUM: 1,
-      LOW: 2
-    };
-
-
-    const sorted =
-      [...vessels].sort(
-        (a, b) =>
-          pri[a.priority] -
-          pri[b.priority]
-      );
-
-
-    document.getElementById(
-      'vessel-tbody'
-    ).innerHTML =
-
-      sorted.map(v => `
-
-        <tr>
-
-          <td>
-
-            <div class="vessel-name">
-              ${v.name}
-            </div>
-
-            <div class="vessel-id">
-              ${v.vessel_id}
-            </div>
-
-          </td>
-
-          <td>${v.type}</td>
-
-          <td>${v.origin_port}</td>
-
-          <td>
-            ${v.eta
-              .replace('T', ' ')
-              .slice(0, 16)}
-          </td>
-
-          <td>
-            ${v.teu_loaded.toLocaleString()}
-          </td>
-
-          <td>
-            <span class="pill pill-${v.priority}">
-              ${v.priority}
-            </span>
-          </td>
-
-          <td>
-            ${v.destination_berth}
-          </td>
-
-          <td style="text-align:center">
-
-            ${
-              v.hazmat
-
-                ? `<span class="hazmat">YES</span>`
-
-                : `<span class="safe">—</span>`
-            }
-
-          </td>
-
-        </tr>
-
-      `).join('');
-
+async function switchPort(key) {
+  activePort = key;
+  // Update buttons
+  document.querySelectorAll('.port-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  // Tell backend
+  await fetch(`${API}/api/ports/${key}`, { method: 'POST' });
+  // Tell WebSocket
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'switch_port', port_key: key }));
   }
-
-
-  /* =========================================================
-     BERTH ASSIGNMENT TABLE
-  ========================================================= */
-
-  function renderAssignTable(assigns) {
-
-    document.getElementById(
-      'assign-tbody'
-    ).innerHTML =
-
-      assigns.map(a => {
-
-        const isQ =
-          a.assigned_berth === 'QUEUED';
-
-
-        const berthColor =
-          isQ
-            ? COLORS.red
-            : COLORS.teal;
-
-
-        const waitColor =
-          a.wait_hours > 0
-            ? COLORS.orange
-            : COLORS.teal;
-
-
-        return `
-
-          <tr>
-
-            <td>
-
-              <div class="vessel-name">
-                ${a.vessel_name}
-              </div>
-
-              <div class="vessel-id">
-                ${a.vessel_id}
-              </div>
-
-            </td>
-
-
-            <td>
-              ${a.vessel_teu.toLocaleString()}
-            </td>
-
-
-            <td>
-
-              <strong
-                style="color:${berthColor}"
-              >
-                ${a.assigned_berth}
-              </strong>
-
-            </td>
-
-
-            <td>
-              ${a.terminal}
-            </td>
-
-
-            <td>
-              ${a.estimated_start}
-            </td>
-
-
-            <td>
-              ${a.estimated_completion}
-            </td>
-
-
-            <td style="text-align:center">
-              ${a.cranes_assigned}
-            </td>
-
-
-            <td
-              style="
-                text-align:center;
-                color:${waitColor};
-                font-weight:800
-              "
-            >
-              ${a.wait_hours}h
-            </td>
-
-
-            <td
-              style="
-                font-size:10px;
-                color:var(--muted)
-              "
-            >
-              ${a.notes}
-            </td>
-
-          </tr>
-
-        `;
-
-      }).join('');
-
-  }
-
-
-  /* =========================================================
-     AI PLAN
-  ========================================================= */
-
-  async function loadPlan() {
-
-    const btn =
-      document.getElementById(
-        'plan-btn'
-      );
-
-
-    const box =
-      document.getElementById(
-        'plan-box'
-      );
-
-
-    btn.disabled = true;
-
-    btn.innerHTML =
-      '<span class="spinner"></span> Generating...';
-
-
-    box.textContent =
-      'Connecting to IBM watsonx.ai and generating the 72-hour operations strategy...';
-
-
-    try {
-
-      const data =
-        await fetch(
-          `${API}/api/plan`
-        ).then(
-          r => r.json()
-        );
-
-
-      box.textContent =
-        data.plan_text;
-
-
-    } catch (e) {
-
-      box.textContent =
-        '⚠ Could not connect to the backend. Please check that the API server is running.';
-
-    }
-
-
-    btn.disabled = false;
-
-    btn.textContent =
-      '↻ Regenerate Plan';
-
-  }
-
-
-  /* =========================================================
-     HEALTH CHECK
-  ========================================================= */
-
-  async function checkHealth() {
-
-    const el =
-      document.getElementById(
-        'wx-status'
-      );
-
-
-    try {
-
-      const d =
-        await fetch(
-          `${API}/api/health`
-        ).then(
-          r => r.json()
-        );
-
-
-      if (
-        d.watsonx_mode === 'live'
-      ) {
-
-        el.style.color =
-          COLORS.teal;
-
-        el.innerHTML =
-          '● watsonx.ai live';
-
-      } else {
-
-        el.style.color =
-          '#987400';
-
-        el.innerHTML =
-          '● mock mode';
-
-      }
-
-
-    } catch {
-
-      el.style.color =
-        COLORS.red;
-
-      el.innerHTML =
-        '● backend offline';
-
-    }
-
-  }
-
-
-  /* =========================================================
-     INITIALIZE
-  ========================================================= */
-
+  // Update map center
+  const p = ports.find(x => x.key === key);
+  if (p) map.setView([p.lat, p.lon], 12);
+  vessels = {}; markers = {}; paths = {}; vesselTrails = {};
+}
+
+// ── Health check ──────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const d = await fetch(`${API}/api/health`).then(r => r.json());
+    const el = document.getElementById('wx-status');
+    el.style.color = d.watsonx_mode === 'live' ? '#3fb950' : '#d29922';
+    el.textContent = d.watsonx_mode === 'live' ? '● watsonx live' : '● mock mode';
+  } catch {}
+}
+
+// ── Refresh congestion every 30 seconds ───────────────────────────────────
+setInterval(loadCongestion, 30000);
+
+// ── Init ───────────────────────────────────────────────────────────────────
+(async () => {
+  initMap(18.95, 72.95);   // Default: JNPT
+  await loadPorts();
   checkHealth();
-
-  loadAll();
-
+  connectWS();
+  // Initial congestion load
+  setTimeout(loadCongestion, 3000);
+})();
 </script>
-
 </body>
 </html>
