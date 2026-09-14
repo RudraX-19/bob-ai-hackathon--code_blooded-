@@ -13,33 +13,28 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check submission.yaml exists
-        run: test -f submission.yaml || (echo "ERROR: submission.yaml not found" && exit 1)
+        run: test -f submission.yaml
 
-      - name: Check submission.yaml has required fields
-        run: |
-          python3 validate_check.py
-        env:
-          CHECK_FILE: submission.yaml
+      - name: Check submission.yaml required fields
+        run: python3 validate_check.py
 
-      - name: Check required docs exist
+      - name: Check docs exist
         run: |
-          test -f docs/setup-guide.md       || (echo "ERROR: docs/setup-guide.md missing" && exit 1)
-          test -f docs/problem-statement.md || (echo "ERROR: docs/problem-statement.md missing" && exit 1)
-          test -f docs/solution-overview.md || (echo "ERROR: docs/solution-overview.md missing" && exit 1)
-          test -f docs/architecture.md      || (echo "ERROR: docs/architecture.md missing" && exit 1)
-          echo "All docs present"
+          test -f docs/setup-guide.md
+          test -f docs/problem-statement.md
+          test -f docs/solution-overview.md
+          test -f docs/architecture.md
 
       - name: Check demo files exist
         run: |
-          test -f demo/demo-video-link.txt || (echo "ERROR: demo/demo-video-link.txt missing" && exit 1)
-          test -f demo/live-demo-url.txt   || (echo "ERROR: demo/live-demo-url.txt missing" && exit 1)
-          echo "Demo files present"
+          test -f demo/demo-video-link.txt
+          test -f demo/live-demo-url.txt
 
       - name: Check src has Python code
         run: |
           count=$(find src -name "*.py" | wc -l)
-          if [ "$count" -lt 2 ]; then echo "ERROR: src/ has fewer than 2 Python files" && exit 1; fi
-          echo "src/ has $count Python files - OK"
+          echo "Python files found: $count"
+          test "$count" -ge 2
 
       - name: All checks passed
         run: echo "Submission validated successfully"
