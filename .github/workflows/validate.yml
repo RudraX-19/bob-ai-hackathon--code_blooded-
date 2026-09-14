@@ -1,0 +1,45 @@
+name: Validate Submission
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check submission.yaml exists
+        run: test -f submission.yaml || (echo "ERROR: submission.yaml not found" && exit 1)
+
+      - name: Check submission.yaml has required fields
+        run: |
+          python3 validate_check.py
+        env:
+          CHECK_FILE: submission.yaml
+
+      - name: Check required docs exist
+        run: |
+          test -f docs/setup-guide.md       || (echo "ERROR: docs/setup-guide.md missing" && exit 1)
+          test -f docs/problem-statement.md || (echo "ERROR: docs/problem-statement.md missing" && exit 1)
+          test -f docs/solution-overview.md || (echo "ERROR: docs/solution-overview.md missing" && exit 1)
+          test -f docs/architecture.md      || (echo "ERROR: docs/architecture.md missing" && exit 1)
+          echo "All docs present"
+
+      - name: Check demo files exist
+        run: |
+          test -f demo/demo-video-link.txt || (echo "ERROR: demo/demo-video-link.txt missing" && exit 1)
+          test -f demo/live-demo-url.txt   || (echo "ERROR: demo/live-demo-url.txt missing" && exit 1)
+          echo "Demo files present"
+
+      - name: Check src has Python code
+        run: |
+          count=$(find src -name "*.py" | wc -l)
+          if [ "$count" -lt 2 ]; then echo "ERROR: src/ has fewer than 2 Python files" && exit 1; fi
+          echo "src/ has $count Python files - OK"
+
+      - name: All checks passed
+        run: echo "Submission validated successfully"
