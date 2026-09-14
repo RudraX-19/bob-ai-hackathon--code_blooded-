@@ -18,10 +18,10 @@
     "max_teu": 22000,
     "cranes_available": 3,
     "crane_moves_per_hour": 28,
-    "current_vessel": null,
-    "occupied_until": null,
+    "current_vessel": "V-002",
+    "occupied_until": "2026-09-10T18:00:00",
     "water_depth_m": 15.8,
-    "status": "AVAILABLE"
+    "status": "OCCUPIED"
   },
   {
     "berth_id": "A3",
@@ -33,7 +33,7 @@
     "current_vessel": null,
     "occupied_until": null,
     "water_depth_m": 15.2,
-    "status": "MAINTENANCE"
+    "status": "OCCUPIED"
   },
   {
     "berth_id": "B1",
