@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Port Pulse — Container Congestion Predictor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0d1117;--surface:#161b22;--card:#1c2129;--border:#30363d;
+      --text:#e6edf3;--muted:#8b949e;
+      --critical:#f85149;--high:#d29922;--medium:#3fb950;--low:#58a6ff;--accent:#388bfd;
+    }
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.6;min-height:100vh}
+
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+    .logo{font-size:18px;font-weight:700;letter-spacing:-.3px}.logo span{color:var(--accent)}
+    .badge{background:#0d419d;color:#79c0ff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid #1f6feb}
+    .header-right{display:flex;align-items:center;gap:12px}
+    #wx-status{font-size:11px;color:var(--muted);padding:3px 10px;border-radius:20px;border:1px solid var(--border)}
+
+    main{max-width:1320px;margin:0 auto;padding:24px 16px}
+
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px}
+    .sc{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+    .sc .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+    .sc .val{font-size:28px;font-weight:700;line-height:1}
+    .sc .sub{font-size:11px;color:var(--muted);margin-top:4px}
+    .c-crit{color:var(--critical)}.c-high{color:var(--high)}.c-med{color:var(--medium)}.c-acc{color:var(--accent)}
+
+    .sec{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+    @media(max-width:800px){.row{grid-template-columns:1fr}}
+    .panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+
+    /* terminal cards */
+    .terminal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:20px}
+    .t-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px}
+    .t-card.CRITICAL{border-color:var(--critical)}
+    .t-card.HIGH{border-color:var(--high)}
+    .t-card.MEDIUM{border-color:rgba(63,185,80,.5)}
+    .t-card.LOW{border-color:rgba(88,166,255,.3)}
+    .t-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .t-name{font-size:16px;font-weight:700}
+    .t-score{font-size:26px;font-weight:800}
+    .bar-bg{background:var(--border);border-radius:4px;height:8px;width:100%;margin:8px 0}
+    .bar{height:8px;border-radius:4px}
+    .t-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0;font-size:12px}
+    .t-stat .k{color:var(--muted)}.t-stat .v{font-weight:600}
+    .t-action{font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+    .t-factors{margin-top:6px}
+    .factor-tag{display:inline-block;font-size:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:2px 7px;margin:2px 2px 0 0;color:var(--muted)}
+
+    /* tables */
+    .tbl-wrap{overflow-x:auto;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+    td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:rgba(255,255,255,.03)}
+
+    .pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;text-transform:uppercase;letter-spacing:.4px}
+    .pill-CRITICAL{background:rgba(248,81,73,.15);color:var(--critical);border:1px solid rgba(248,81,73,.4)}
+    .pill-HIGH{background:rgba(210,153,34,.15);color:var(--high);border:1px solid rgba(210,153,34,.4)}
+    .pill-MEDIUM{background:rgba(63,185,80,.15);color:var(--medium);border:1px solid rgba(63,185,80,.4)}
+    .pill-LOW{background:rgba(88,166,255,.15);color:var(--low);border:1px solid rgba(88,166,255,.4)}
+    .pill-QUEUED{background:rgba(248,81,73,.15);color:var(--critical);border:1px solid rgba(248,81,73,.4)}
+
+    #plan-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:24px;white-space:pre-wrap;font-family:"SFMono-Regular",Consolas,monospace;font-size:12px;line-height:1.7;color:#c9d1d9;max-height:480px;overflow-y:auto}
+
+    .btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
+    .btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+    .btn-sm{padding:5px 12px;font-size:12px}
+    .flex-between{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    canvas{max-height:260px}
+    footer{text-align:center;padding:20px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:32px}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🚢 Port <span>Pulse</span></div>
+  <div class="header-right">
+    <span id="wx-status">Checking...</span>
+    <span class="badge">IBM Bob Hackathon 2026</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="sc"><div class="lbl">Incoming Vessels</div><div class="val c-acc" id="s-vessels">—</div><div class="sub">Next 24 hours</div></div>
+    <div class="sc"><div class="lbl">Critical Terminals</div><div class="val c-crit" id="s-critical">—</div><div class="sub">Immediate action needed</div></div>
+    <div class="sc"><div class="lbl">Vessels Queued</div><div class="val c-high" id="s-queued">—</div><div class="sub">No berth available</div></div>
+    <div class="sc"><div class="lbl">Total Berths</div><div class="val c-acc" id="s-berths">—</div><div class="sub">Across all terminals</div></div>
+    <div class="sc"><div class="lbl">Berths Available</div><div class="val c-med" id="s-avail">—</div><div class="sub">Ready to assign</div></div>
+  </div>
+
+  <!-- Terminal Congestion Cards -->
+  <div class="sec">Terminal Congestion Status</div>
+  <div class="terminal-grid" id="terminal-cards">
+    <div style="color:var(--muted);text-align:center;padding:24px">Loading...</div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="row">
+    <div class="panel">
+      <div class="sec">Congestion Score by Terminal</div>
+      <canvas id="congestionChart"></canvas>
+    </div>
+    <div class="panel">
+      <div class="sec">Incoming Vessel Load by Terminal</div>
+      <canvas id="vesselChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Vessel Schedule Table -->
+  <div class="panel tbl-wrap" style="margin-bottom:20px">
+    <div class="flex-between">
+      <div class="sec" style="margin-bottom:0">Incoming Vessel Schedule</div>
+      <button class="btn btn-sm" onclick="loadAll()" id="refresh-btn">↻ Refresh</button>
+    </div><br/>
+    <table>
+      <thead><tr>
+        <th>Vessel</th><th>Type</th><th>Origin</th><th>ETA</th>
+        <th>TEU</th><th>Priority</th><th>Destination</th><th>Hazmat</th>
+      </tr></thead>
+      <tbody id="vessel-tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Berth Assignment Table -->
+  <div class="panel tbl-wrap" style="margin-bottom:20px">
+    <div class="sec">Berth Assignment Plan</div>
+    <table>
+      <thead><tr>
+        <th>Vessel</th><th>TEU</th><th>Assigned Berth</th><th>Terminal</th>
+        <th>Start</th><th>Complete</th><th>Cranes</th><th>Wait (hrs)</th><th>Notes</th>
+      </tr></thead>
+      <tbody id="assign-tbody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- 72-hr Operations Plan -->
+  <div class="panel" style="margin-bottom:20px">
+    <div class="flex-between">
+      <div class="sec" style="margin-bottom:0">AI-Generated 72-Hour Operations Plan <span style="color:var(--accent);font-size:10px">(IBM watsonx.ai)</span></div>
+      <button class="btn" onclick="loadPlan()" id="plan-btn">Generate 72-Hour Plan</button>
+    </div><br/>
+    <div id="plan-box">Click "Generate 72-Hour Plan" to get an AI-powered port operations and crew pre-positioning plan.</div>
+  </div>
+
+</main>
+
+<footer>Port Pulse &nbsp;·&nbsp; L1 Container Congestion Predictor &nbsp;·&nbsp; IBM Bob AI Innovation Hackathon 2026 &nbsp;·&nbsp; Team: Code Blooded</footer>
+
+<script>
+  const API = '';
+  let cChart = null, vChart = null;
+
+  function congColor(level) {
+    return {CRITICAL:'#f85149',HIGH:'#d29922',MEDIUM:'#3fb950',LOW:'#58a6ff'}[level]||'#8b949e';
+  }
+
+  async function loadAll() {
+    document.getElementById('refresh-btn').disabled = true;
+    document.getElementById('refresh-btn').textContent = 'Loading...';
+    try {
+      const [vessels, berths, cong, assigns] = await Promise.all([
+        fetch(`${API}/api/vessels`).then(r=>r.json()),
+        fetch(`${API}/api/berths`).then(r=>r.json()),
+        fetch(`${API}/api/congestion`).then(r=>r.json()),
+        fetch(`${API}/api/assignments`).then(r=>r.json()),
+      ]);
+      renderSummary(vessels, berths, assigns);
+      renderTerminalCards(cong);
+      renderCharts(cong, vessels);
+      renderVesselTable(vessels);
+      renderAssignTable(assigns);
+    } catch(e) {
+      document.getElementById('vessel-tbody').innerHTML =
+        `<tr><td colspan="8" style="color:var(--critical);text-align:center;padding:24px">Error: Is the backend running on port 8000?</td></tr>`;
+    }
+    document.getElementById('refresh-btn').disabled = false;
+    document.getElementById('refresh-btn').textContent = '↻ Refresh';
+  }
+
+  function renderSummary(vessels, berths, assigns) {
+    document.getElementById('s-vessels').textContent = vessels.length;
+    document.getElementById('s-berths').textContent = berths.length;
+    document.getElementById('s-avail').textContent = berths.filter(b=>b.status==='AVAILABLE').length;
+    document.getElementById('s-queued').textContent = assigns.filter(a=>a.assigned_berth==='QUEUED').length;
+    // critical terminals counted in card render
+  }
+
+  function renderTerminalCards(cong) {
+    let critCount = 0;
+    const html = cong.map(t => {
+      if (t.congestion_level === 'CRITICAL') critCount++;
+      const col = congColor(t.congestion_level);
+      const factors = (t.risk_factors||[]).map(f=>`<span class="factor-tag">${f}</span>`).join('');
+      return `
+        <div class="t-card ${t.congestion_level}">
+          <div class="t-header">
+            <div class="t-name">${t.terminal}</div>
+            <div class="t-score" style="color:${col}">${t.congestion_score}</div>
+          </div>
+          <span class="pill pill-${t.congestion_level}">${t.congestion_level}</span>
+          <div class="bar-bg"><div class="bar" style="width:${t.congestion_score}%;background:${col}"></div></div>
+          <div class="t-stats">
+            <div class="t-stat"><div class="k">Incoming</div><div class="v">${t.vessels_incoming} vessels</div></div>
+            <div class="t-stat"><div class="k">Available berths</div><div class="v">${t.berths_available}/${t.berths_total}</div></div>
+            <div class="t-stat"><div class="k">Queue</div><div class="v" style="color:${t.queue_size>0?'var(--critical)':'var(--medium)'}">${t.queue_size} waiting</div></div>
+            <div class="t-stat"><div class="k">Est. wait</div><div class="v">${t.estimated_wait_hours}h</div></div>
+          </div>
+          <div class="t-factors">${factors}</div>
+          <div class="t-action">${t.recommended_action}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('terminal-cards').innerHTML = html;
+    document.getElementById('s-critical').textContent = critCount;
+  }
+
+  function renderCharts(cong, vessels) {
+    if (cChart) cChart.destroy();
+    cChart = new Chart(document.getElementById('congestionChart'), {
+      type: 'bar',
+      data: {
+        labels: cong.map(t=>t.terminal),
+        datasets:[{
+          label:'Congestion Score',
+          data: cong.map(t=>t.congestion_score),
+          backgroundColor: cong.map(t=>congColor(t.congestion_level)),
+          borderRadius:5,
+        }]
+      },
+      options:{
+        scales:{
+          x:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}},
+          y:{min:0,max:100,ticks:{color:'#8b949e'},grid:{color:'#21262d'}}
+        },
+        plugins:{legend:{display:false}}
+      }
+    });
+
+    // vessel count per terminal
+    const terms = [...new Set(vessels.map(v=>v.destination_berth))].sort();
+    const counts = terms.map(t=>vessels.filter(v=>v.destination_berth===t).length);
+    if (vChart) vChart.destroy();
+    vChart = new Chart(document.getElementById('vesselChart'),{
+      type:'doughnut',
+      data:{
+        labels: terms,
+        datasets:[{data:counts,backgroundColor:['#388bfd','#d29922','#3fb950'],borderColor:'#1c2129',borderWidth:3}]
+      },
+      options:{plugins:{legend:{labels:{color:'#e6edf3',font:{size:12}}}},cutout:'60%'}
+    });
+  }
+
+  function renderVesselTable(vessels) {
+    const pri = {HIGH:0,MEDIUM:1,LOW:2};
+    const sorted = [...vessels].sort((a,b)=>pri[a.priority]-pri[b.priority]);
+    document.getElementById('vessel-tbody').innerHTML = sorted.map(v=>`
+      <tr>
+        <td><div style="font-weight:600">${v.name}</div><div style="font-size:11px;color:var(--muted)">${v.vessel_id}</div></td>
+        <td>${v.type}</td>
+        <td>${v.origin_port}</td>
+        <td style="font-size:12px">${v.eta.replace('T',' ').slice(0,16)}</td>
+        <td>${v.teu_loaded.toLocaleString()}</td>
+        <td><span class="pill pill-${v.priority}">${v.priority}</span></td>
+        <td>${v.destination_berth}</td>
+        <td style="text-align:center">${v.hazmat?'<span style="color:var(--critical)">YES</span>':'—'}</td>
+      </tr>`).join('');
+  }
+
+  function renderAssignTable(assigns) {
+    document.getElementById('assign-tbody').innerHTML = assigns.map(a=>{
+      const isQ = a.assigned_berth === 'QUEUED';
+      return `
+        <tr>
+          <td><div style="font-weight:600">${a.vessel_name}</div><div style="font-size:11px;color:var(--muted)">${a.vessel_id}</div></td>
+          <td>${a.vessel_teu.toLocaleString()}</td>
+          <td style="font-weight:700;color:${isQ?'var(--critical)':'var(--medium)'}">${a.assigned_berth}</td>
+          <td>${a.terminal}</td>
+          <td style="font-size:12px">${a.estimated_start}</td>
+          <td style="font-size:12px">${a.estimated_completion}</td>
+          <td style="text-align:center">${a.cranes_assigned}</td>
+          <td style="text-align:center;color:${a.wait_hours>0?'var(--high)':'var(--medium)'}">${a.wait_hours}</td>
+          <td style="font-size:11px;color:var(--muted)">${a.notes}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function loadPlan() {
+    const btn = document.getElementById('plan-btn');
+    const box = document.getElementById('plan-box');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Generating...';
+    box.textContent = 'Calling IBM watsonx.ai... please wait.';
+    try {
+      const data = await fetch(`${API}/api/plan`).then(r=>r.json());
+      box.textContent = data.plan_text;
+    } catch(e) {
+      box.textContent = 'Error: Could not connect to backend.';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Regenerate Plan';
+  }
+
+  async function checkHealth() {
+    try {
+      const d = await fetch(`${API}/api/health`).then(r=>r.json());
+      const el = document.getElementById('wx-status');
+      el.style.color = d.watsonx_mode==='live'?'#3fb950':'#d29922';
+      el.textContent = d.watsonx_mode==='live'?'● watsonx.ai live':'● mock mode';
+    } catch {
+      const el = document.getElementById('wx-status');
+      el.style.color='#f85149'; el.textContent='● backend offline';
+    }
+  }
+
+  checkHealth(); loadAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+incident_id,vessel_id,vessel_name,date,terminal,delay_hours,cause,weather,berth_id
+INC-001,V-EX1,Pacific Glory,2026-07-12,Terminal A,14.5,Berth congestion - 3 vessels waiting,Clear,A1
+INC-002,V-EX2,Cosco Fortune,2026-07-15,Terminal B,8.0,Crane breakdown during unload,Clear,B1
+INC-003,V-EX3,Evergreen Star,2026-07-22,Terminal A,22.0,Storm - port closed 18hrs,Tropical Storm,A2
+INC-004,V-EX4,MSC Diana,2026-08-01,Terminal A,6.5,Documentation delays customs,Clear,A1
+INC-005,V-EX5,OOCL Paris,2026-08-05,Terminal B,11.0,Terminal A overflow - diverted,Clear,B2
+INC-006,V-EX6,Maersk Lima,2026-08-10,Terminal A,18.0,Berth congestion - 5 vessels queuing,Clear,A1
+INC-007,V-EX7,Yang Ming Eagle,2026-08-14,Terminal C,3.0,Feeder vessel yard full,Clear,C1
+INC-008,V-EX8,Hapag Berlin,2026-08-18,Terminal A,9.5,Terminal A overflow - berth unavailable,Clear,A2
+INC-009,V-EX9,PIL Colombo,2026-08-22,Terminal B,7.0,Crane shortage - only 1 operational,Clear,B1
+INC-010,V-EX10,Wan Hai 301,2026-08-28,Terminal A,31.0,Severe congestion - 7 vessels at anchor,Rain,A1
+INC-011,V-EX11,CMA CGM Zeus,2026-09-02,Terminal A,12.0,Berth congestion - peak season,Clear,A1
+INC-012,V-EX12,Cosco Neptune,2026-09-05,Terminal B,5.5,Yard capacity at 95 percent,Clear,B2

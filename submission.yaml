@@ -1,0 +1,35 @@
+team:
+  name: "Code Blooded"
+  track: "AI"
+  lead:
+    name: "Rudra Vaghasiya"
+    email: "rudravaghasiya.ce@gmail.com"
+  members:
+    - name: "MEMBER_2_NAME"
+      email: "member2@example.com"
+    - name: "MEMBER_3_NAME"
+      email: "member3@example.com"
+    - name: "MEMBER_4_NAME"
+      email: "member4@example.com"
+
+submission:
+  title: "Port Pulse — AI-Powered Container Congestion Predictor & Port Operations Optimiser"
+  problem_statement: >
+    Port operators manage berth allocation, crane scheduling, and vessel routing using manual
+    spreadsheets. Congestion hotspots are identified only after vessels are already queuing —
+    costing global supply chains billions. The 2021 LA/Long Beach backlog saw 100+ ships waiting
+    for weeks, costing $10B+. Operators need a real-time, AI-driven system that predicts
+    congestion before it happens and generates actionable 72-hour operations plans.
+  solution_summary: >
+    Port Pulse is an AI-powered web dashboard that ingests vessel schedules and berth capacity
+    data to predict congestion hotspots per terminal using a multi-factor scoring engine (0-100).
+    It auto-assigns vessels to optimal berths, recommends alternate routing strategies, and uses
+    IBM watsonx.ai (Granite model) to generate a natural-language 72-hour port operations and
+    crew pre-positioning plan. Built with IBM Bob as the core development partner.
+  key_features:
+    - "Multi-factor congestion scoring per terminal (berth utilization + queue + history + priority)"
+    - "Automated best-fit berth assignment engine with alternate routing fallback"
+    - "IBM watsonx.ai Granite-powered 72-hour operations plan generation"
+    - "Real-time dashboard with terminal cards, vessel table, and berth assignment table"
+    - "Hazmat vessel detection and priority-based scheduling"
+    - "REST API backend with FastAPI — fully documented at /docs"

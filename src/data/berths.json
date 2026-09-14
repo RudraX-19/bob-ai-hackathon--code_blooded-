@@ -1,0 +1,86 @@
+[
+  {
+    "berth_id": "A1",
+    "terminal": "Terminal A",
+    "max_vessel_length_m": 420,
+    "max_teu": 24000,
+    "cranes_available": 4,
+    "crane_moves_per_hour": 30,
+    "current_vessel": "V-001",
+    "occupied_until": "2026-09-10T14:00:00",
+    "water_depth_m": 16.5,
+    "status": "OCCUPIED"
+  },
+  {
+    "berth_id": "A2",
+    "terminal": "Terminal A",
+    "max_vessel_length_m": 400,
+    "max_teu": 22000,
+    "cranes_available": 3,
+    "crane_moves_per_hour": 28,
+    "current_vessel": null,
+    "occupied_until": null,
+    "water_depth_m": 15.8,
+    "status": "AVAILABLE"
+  },
+  {
+    "berth_id": "A3",
+    "terminal": "Terminal A",
+    "max_vessel_length_m": 380,
+    "max_teu": 20000,
+    "cranes_available": 3,
+    "crane_moves_per_hour": 25,
+    "current_vessel": null,
+    "occupied_until": null,
+    "water_depth_m": 15.2,
+    "status": "MAINTENANCE"
+  },
+  {
+    "berth_id": "B1",
+    "terminal": "Terminal B",
+    "max_vessel_length_m": 350,
+    "max_teu": 17000,
+    "cranes_available": 3,
+    "crane_moves_per_hour": 26,
+    "current_vessel": "V-004",
+    "occupied_until": "2026-09-10T16:00:00",
+    "water_depth_m": 14.5,
+    "status": "OCCUPIED"
+  },
+  {
+    "berth_id": "B2",
+    "terminal": "Terminal B",
+    "max_vessel_length_m": 310,
+    "max_teu": 14000,
+    "cranes_available": 2,
+    "crane_moves_per_hour": 22,
+    "current_vessel": null,
+    "occupied_until": null,
+    "water_depth_m": 13.8,
+    "status": "AVAILABLE"
+  },
+  {
+    "berth_id": "C1",
+    "terminal": "Terminal C",
+    "max_vessel_length_m": 200,
+    "max_teu": 4000,
+    "cranes_available": 2,
+    "crane_moves_per_hour": 18,
+    "current_vessel": null,
+    "occupied_until": null,
+    "water_depth_m": 11.0,
+    "status": "AVAILABLE"
+  },
+  {
+    "berth_id": "C2",
+    "terminal": "Terminal C",
+    "max_vessel_length_m": 200,
+    "max_teu": 4000,
+    "cranes_available": 2,
+    "crane_moves_per_hour": 18,
+    "current_vessel": "V-008",
+    "occupied_until": "2026-09-10T22:00:00",
+    "water_depth_m": 11.0,
+    "status": "OCCUPIED"
+  }
+]
