@@ -11,7 +11,7 @@
 | **Team Name** | Code Blooded |
 | **Track** | AI |
 | **Team Lead** | Shubham Vora — shubhamvora269@gmail.com |
-| **Members** | Rudra Vaghasiya, Varj Viradiya, Jay Zalavadiya |
+| **Members** | Rudra Vaghasiya, Vraj Viradiya, Jay Zalavadiya |
 
 ---
 
