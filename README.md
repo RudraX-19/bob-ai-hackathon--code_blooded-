@@ -2,11 +2,15 @@
 
 ![Port Pulse Live Dashboard](demo/screenshots/live-demo.png)
 
-*Top: Desktop Dashboard | Bottom: Tablet & Mobile Responsive Interfaces*
 <p align="center">
-  <img src="demo/screenshots/live-demo-tablet.png" alt="Tablet View" width="45%">
+  <img src="demo/screenshots/live-demo-tablet.png" alt="Tablet View" width="45%" style="margin-right: 2%;">
   <img src="demo/screenshots/live-demo-mobile.png" alt="Mobile View" width="45%">
 </p>
+<p align="center"><em>
+  <b>Pictured Above:</b> The Port Pulse Live Dashboard functioning in real-time. 
+  <br> <b>Desktop (Top):</b> Tracking 100+ global maritime vessels live via AISStream satellite data while displaying the generated Watsonx 72-hour Operations Plan and critical routing diversions. 
+  <br> <b>Tablet/Mobile (Bottom):</b> Enterprise-grade responsive implementation showing zero data truncation across device viewports.
+</em></p>
 
 > ⚠️ **Replace everything in `[ ]` brackets with your actual content before submission.**
 
