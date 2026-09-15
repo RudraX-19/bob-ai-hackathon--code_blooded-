@@ -135,8 +135,8 @@ The application is deployed on Render.com with an Always-On WebSocket server:
 
 | Artifact | Link |
 |---|---|
-| 📹 **Demo Video** | *(coming soon — link will be added here)* |
-| 📊 **Presentation (PPT)** | *(coming soon — link will be added here)* |
+| 📹 **Demo Video** | [Watch on Google Drive](https://drive.google.com/drive/folders/120lRzG5KcjU2TbEX6w-PXbu8eN8tPa31?usp=drive_link) |
+| 📊 **Presentation (PPT)** | [Port_Pulse_Hackathon_Pitch.pptx](demo/Port_Pulse_Hackathon_Pitch.pptx) |
 | 🌐 **Live Demo** | [bob-ai-hackathon-code-blooded.onrender.com](https://bob-ai-hackathon-code-blooded.onrender.com) |
 | 🖼️ **Screenshots Gallery** | [See demo/screenshots/](demo/screenshots/) |
 
