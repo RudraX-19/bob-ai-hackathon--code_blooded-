@@ -8,9 +8,9 @@
 | Role | Name | Email |
 |---|---|---|
 | Team Lead | Rudra Vaghasiya | rudravaghasiya.ce@gmail.com |
-| Member 2  | MEMBER_NAME | EMAIL |
-| Member 3  | MEMBER_NAME | EMAIL |
-| Member 4  | MEMBER_NAME | EMAIL |
+| Member 2  | Shubham Vora | shubhamvora269@gmail.com |
+| Member 3  | Varj Viradiya | varjviradiya1111@gmail.com |
+| Member 4  | Jay Zalavadiya | jayzalavadiya2705@gmail.com |
 
 **Track:** AI &nbsp;|&nbsp; **Problem:** L1 — Logistics: Container Congestion Predictor & Port Operations Optimiser
 

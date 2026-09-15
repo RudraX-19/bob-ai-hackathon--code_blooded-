@@ -5,12 +5,12 @@ team:
     name: "Rudra Vaghasiya"
     email: "rudravaghasiya.ce@gmail.com"
   members:
-    - name: "MEMBER_2_NAME"
-      email: "member2@example.com"
-    - name: "MEMBER_3_NAME"
-      email: "member3@example.com"
-    - name: "MEMBER_4_NAME"
-      email: "member4@example.com"
+    - name: "Shubham Vora"
+      email: "shubhamvora269@gmail.com"
+    - name: "Varj Viradiya"
+      email: "varjviradiya1111@gmail.com"
+    - name: "Jay Zalavadiya"
+      email: "jayzalavadiya2705@gmail.com"
 
 submission:
   title: "Port Pulse — AI-Powered Container Congestion Predictor & Port Operations Optimiser"
