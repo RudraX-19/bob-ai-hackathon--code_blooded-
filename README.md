@@ -1,5 +1,7 @@
 # 🚀 Port Pulse — AI-Powered Container Congestion Predictor & Port Operations Optimiser
 
+![Port Pulse Live Dashboard](demo/screenshots/live-demo.png)
+
 > ⚠️ **Replace everything in `[ ]` brackets with your actual content before submission.**
 
 ---
