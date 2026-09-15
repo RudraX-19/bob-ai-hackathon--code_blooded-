@@ -80,8 +80,8 @@ def _move_vessel(v: dict) -> dict:
     if speed < 0.3:
         return v                       # anchored — don't move
 
-    # 3-second tick: distance in km
-    dist_km = (speed * 1.852) * (3 / 3600)
+    # 3-second tick: distance in km (Accelerated 40x for hackathon demo visibility)
+    dist_km = (speed * 1.852) * (3 / 3600) * 40
 
     lat = v["lat"]
     lon = v["lon"]
@@ -128,18 +128,35 @@ async def _simulation_loop():
                         pass
 
 
+def _find_nearest_port(lat, lon):
+    from indian_ports import INDIAN_PORTS
+    import math
+    def dist(lat1, lon1, lat2, lon2):
+        R = 6371; dlat = math.radians(lat2 - lat1); dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
+        return R * 2 * math.asin(math.sqrt(a))
+    
+    nearest = "JNPT"
+    min_d = 999999
+    for k, p in INDIAN_PORTS.items():
+        d = dist(lat, lon, p["lat"], p["lon"])
+        if d < min_d:
+            min_d = d
+            nearest = k
+    return nearest
+
 async def _ais_stream_loop():
-    """Connect to AISStream and layer real updates on top."""
+    """Connect to AISStream and layer real updates on top for all of India."""
     while _running:
         try:
             async with websockets.connect(AIS_URL, ping_interval=30, ping_timeout=20) as ws:
                 payload = {
                     "APIKey":       AIS_API_KEY,
-                    "BoundingBoxes": [_active_bbox],
+                    "BoundingBoxes": [[[6.0, 68.0], [24.0, 89.0]]],  # ALL OF INDIA
                     "FilterMessageTypes": ["PositionReport"]
                 }
                 await ws.send(json.dumps(payload))
-                logger.info(f"AISStream connected for {_active_port}")
+                logger.info(f"AISStream LIVE connection established for ALL INDIA")
                 async for raw_msg in ws:
                     if not _running:
                         break
@@ -154,6 +171,9 @@ async def _ais_stream_loop():
                             lon = pos.get("Longitude", 0)
                             if lat == 0 and lon == 0:
                                 continue
+                            
+                            nearest_port = _find_nearest_port(lat, lon)
+                            
                             existing = vessel_store.get(mmsi, {})
                             updated  = {
                                 **existing,
@@ -164,7 +184,7 @@ async def _ais_stream_loop():
                                 "speed":     pos.get("Sog", 0),
                                 "heading":   pos.get("TrueHeading", pos.get("Cog", 0)),
                                 "last_seen": time.time(),
-                                "port":      _active_port,
+                                "port":      nearest_port,
                                 "source":    "live",
                             }
                             vessel_store[mmsi] = updated

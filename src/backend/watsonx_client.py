@@ -11,7 +11,7 @@ WATSONX_URL        = os.getenv("WATSONX_URL", "https://us-south.ml.cloud.ibm.com
 def _build_prompt(hotspots: list[dict], assignments: list[dict]) -> str:
     critical = [h for h in hotspots if h["congestion_level"] == "CRITICAL"]
     high     = [h for h in hotspots if h["congestion_level"] == "HIGH"]
-    queued   = [a for a in assignments if a["assigned_berth"] == "QUEUED"]
+    queued   = [a for a in assignments if a.get("assigned_berth") == "QUEUED"]
 
     summary = ""
     for h in hotspots:
@@ -20,23 +20,27 @@ def _build_prompt(hotspots: list[dict], assignments: list[dict]) -> str:
             f"{h['vessels_incoming']} incoming, {h['berths_available']} berths free, "
             f"queue: {h['queue_size']} vessels, wait: {h['estimated_wait_hours']}h\n"
         )
+        
+    vessel_data = ""
+    for a in assignments[:15]: # Show top 15 allocations
+        vessel_data += f"- {a['vessel_name']} ({a.get('vessel_type', 'Ship')}): Route -> {a.get('routing_strategy', 'Standard')} | {a.get('assigned_berth')} with {a.get('assigned_cranes', 2)} cranes\n"
 
     return f"""You are a port operations planning expert.
-Generate a structured 72-hour port operations plan based on this congestion analysis.
+Generate a structured 72-hour port operations plan based on this congestion analysis and proposed routing/resource allocations.
 
 CONGESTION SUMMARY:
 - Critical terminals: {len(critical)}
 - High congestion terminals: {len(high)}
-- Vessels queued with no berth: {len(queued)}
 - Total incoming vessels: {len(assignments)}
 
 TERMINAL STATUS:
 {summary}
-
+PROPOSED ROUTING & RESOURCE ALLOCATIONS (Sample):
+{vessel_data}
 Generate a clear 72-hour plan covering:
 1. Immediate actions (0-24 hours) for critical terminals
-2. Berth and crane optimization (24-48 hours)
-3. Alternate routing recommendations
+2. Berth and crane optimization (24-48 hours) validating the proposed cranes/berths
+3. Alternate routing recommendations validating the proposed route diversions
 4. Crew and equipment pre-positioning
 """
 
@@ -88,10 +92,14 @@ def _mock_plan(hotspots: list[dict], assignments: list[dict]) -> str:
         ">> Berth Assignment Summary",
     ]
     for a in assignments[:6]:
-        status = "QUEUED - WAITING" if a["assigned_berth"] == "QUEUED" else f"Berth {a['assigned_berth']}"
+        berth_val = a.get("assigned_berth", "LIVE")
+        status = "QUEUED - WAITING" if berth_val == "QUEUED" else f"Berth {berth_val}"
+        start  = a.get("estimated_start", "Live tracking")
+        unload = a.get("unload_hours", "—")
+        teu    = a.get("vessel_teu", 0)
         lines.append(
-            f"   - {a['vessel_name']} ({a['vessel_teu']:,} TEU) -> {status} | "
-            f"Start: {a['estimated_start']} | Unload: {a['unload_hours']}h"
+            f"   - {a['vessel_name']} ({teu:,} TEU) -> {status} | "
+            f"Start: {start} | Unload: {unload}h"
         )
 
     lines += [
@@ -134,10 +142,10 @@ def generate_ops_plan(hotspots: list[dict], assignments: list[dict]) -> str:
         from ibm_watsonx_ai.foundation_models import ModelInference
         credentials = Credentials(url=WATSONX_URL, api_key=WATSONX_API_KEY)
         model = ModelInference(
-            model_id="ibm/granite-13b-instruct-v2",
+            model_id="meta-llama/llama-3-3-70b-instruct",
             credentials=credentials,
             project_id=WATSONX_PROJECT_ID,
-            params={"decoding_method": "greedy", "max_new_tokens": 800, "temperature": 0.7}
+            params={"decoding_method": "greedy", "max_new_tokens": 1200, "temperature": 0.7}
         )
         response = model.generate_text(prompt=_build_prompt(hotspots, assignments))
         return response if response else _mock_plan(hotspots, assignments)
