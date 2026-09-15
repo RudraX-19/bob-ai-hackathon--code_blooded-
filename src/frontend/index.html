@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Port Pulse — Real-Time Indian Port Monitor</title>
+  <title>Port Pulse — India Live Port Monitor</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
@@ -14,412 +14,450 @@
       --text:#e6edf3;--muted:#8b949e;
       --critical:#f85149;--high:#d29922;--medium:#3fb950;--low:#58a6ff;--accent:#388bfd;
     }
-    body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.6;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:13px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
-    /* ── header ── */
-    header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:1000}
-    .logo{font-size:16px;font-weight:700}.logo span{color:var(--accent)}
-    .badge{background:#0d419d;color:#79c0ff;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid #1f6feb}
-    .header-right{display:flex;align-items:center;gap:10px}
-    #wx-status,#ais-status{font-size:11px;color:var(--muted);padding:2px 8px;border-radius:20px;border:1px solid var(--border)}
+    /* ── Header ── */
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:1000}
+    .logo{font-size:17px;font-weight:700}.logo span{color:var(--accent)}
+    .hright{display:flex;align-items:center;gap:10px}
+    .badge{background:#0d419d;color:#79c0ff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid #1f6feb}
+    #ais-dot{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+    .pulse{width:8px;height:8px;border-radius:50%;background:var(--critical);animation:blink 1.4s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-    /* ── port selector ── */
-    .port-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 18px;display:flex;align-items:center;gap:8px;flex-shrink:0;overflow-x:auto}
-    .port-btn{background:var(--card);border:1px solid var(--border);color:var(--text);padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;white-space:nowrap;transition:all .15s}
-    .port-btn:hover{border-color:var(--accent);color:var(--accent)}
-    .port-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+    /* ── Layout ── */
+    .layout{display:flex;flex:1;overflow:hidden}
 
-    /* ── main layout ── */
-    .main-layout{display:flex;flex:1;overflow:hidden}
+    /* ── Left panel ── */
+    .left{width:300px;min-width:280px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .left-inner{flex:1;overflow-y:auto;padding:10px}
 
-    /* ── left sidebar ── */
-    .sidebar{width:340px;min-width:300px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
-    .sidebar-inner{flex:1;overflow-y:auto;padding:12px}
+    /* ── Map ── */
+    #map{flex:1;z-index:1;position:relative}
 
-    /* ── map ── */
-    #map{flex:1;z-index:1}
+    /* ── Right panel ── */
+    .right{width:300px;min-width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .right-inner{flex:1;overflow-y:auto;padding:10px}
 
-    /* ── right panel ── */
-    .right-panel{width:320px;min-width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
-    .right-inner{flex:1;overflow-y:auto;padding:12px}
-
-    /* ── summary cards ── */
-    .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-    .stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
-    .stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+    /* ── Stat row ── */
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+    .stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
     .stat .val{font-size:22px;font-weight:700;line-height:1.2}
-    .c-crit{color:var(--critical)}.c-high{color:var(--high)}.c-med{color:var(--medium)}.c-acc{color:var(--accent)}
 
-    /* ── section title ── */
-    .sec{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:12px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+    /* ── Section title ── */
+    .sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:10px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--border)}
 
-    /* ── terminal cards ── */
-    .t-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px}
-    .t-card.CRITICAL{border-color:var(--critical)}
-    .t-card.HIGH{border-color:var(--high)}
-    .t-card.MEDIUM{border-color:rgba(63,185,80,.5)}
-    .t-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-    .t-name{font-size:13px;font-weight:600}
-    .t-score{font-size:20px;font-weight:800}
-    .bar-bg{background:var(--border);border-radius:3px;height:5px;width:100%;margin:6px 0}
-    .bar{height:5px;border-radius:3px}
-    .t-stats{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;margin-top:6px}
-    .t-stat .k{color:var(--muted)}.t-stat .v{font-weight:600}
-    .t-action{font-size:10px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+    /* ── Port summary cards ── */
+    .port-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:border-color .15s}
+    .port-card:hover{border-color:var(--accent)}
+    .port-card.active{border-color:var(--accent);background:#0d2044}
+    .port-card.CRITICAL{border-left:3px solid var(--critical)}
+    .port-card.HIGH{border-left:3px solid var(--high)}
+    .port-card.MEDIUM{border-left:3px solid var(--medium)}
+    .port-card.LOW{border-left:3px solid var(--low)}
+    .pc-header{display:flex;justify-content:space-between;align-items:center}
+    .pc-name{font-size:12px;font-weight:700}
+    .pc-score{font-size:18px;font-weight:800}
+    .pc-bar-bg{background:var(--border);border-radius:3px;height:4px;width:100%;margin:5px 0}
+    .pc-bar{height:4px;border-radius:3px}
+    .pc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:10px;margin-top:5px}
+    .pc-stat .k{color:var(--muted)}.pc-stat .v{font-weight:600}
 
-    /* ── vessel list ── */
-    .v-item{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:border-color .15s}
+    /* ── Vessel list ── */
+    .v-item{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:7px 9px;margin-bottom:5px;cursor:pointer;transition:border-color .15s;display:flex;justify-content:space-between;align-items:center}
     .v-item:hover{border-color:var(--accent)}
     .v-item.moving{border-left:3px solid var(--medium)}
     .v-item.anchored{border-left:3px solid var(--high)}
-    .v-name{font-weight:600;font-size:12px}
-    .v-meta{font-size:11px;color:var(--muted)}
-    .v-speed{font-size:11px;font-weight:600}
+    .v-name{font-weight:600;font-size:11px}
+    .v-meta{font-size:10px;color:var(--muted)}
+    .v-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;white-space:nowrap}
+    .vb-moving{background:rgba(63,185,80,.15);color:var(--medium);border:1px solid rgba(63,185,80,.3)}
+    .vb-anchored{background:rgba(210,153,34,.15);color:var(--high);border:1px solid rgba(210,153,34,.3)}
 
-    /* ── pill ── */
+    /* ── Pills ── */
     .pill{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;text-transform:uppercase}
     .pill-CRITICAL{background:rgba(248,81,73,.15);color:var(--critical);border:1px solid rgba(248,81,73,.4)}
     .pill-HIGH{background:rgba(210,153,34,.15);color:var(--high);border:1px solid rgba(210,153,34,.4)}
     .pill-MEDIUM{background:rgba(63,185,80,.15);color:var(--medium);border:1px solid rgba(63,185,80,.4)}
     .pill-LOW{background:rgba(88,166,255,.15);color:var(--low);border:1px solid rgba(88,166,255,.4)}
 
-    /* ── plan box ── */
-    #plan-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;white-space:pre-wrap;font-family:monospace;font-size:11px;line-height:1.6;color:#c9d1d9;max-height:300px;overflow-y:auto;margin-top:6px}
-
-    /* ── buttons ── */
-    .btn{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s;width:100%}
+    /* ── Buttons ── */
+    .btn{display:flex;align-items:center;justify-content:center;gap:5px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;width:100%;transition:opacity .15s}
     .btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
-    .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    .spinner{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ── live dot ── */
-    .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--critical);animation:pulse 1.5s ease-in-out infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    /* ── Plan box ── */
+    #plan-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;white-space:pre-wrap;font-family:monospace;font-size:10px;line-height:1.6;color:#c9d1d9;max-height:280px;overflow-y:auto;margin-top:7px}
 
-    /* ── chart ── */
-    canvas{max-height:160px}
+    /* ── Chart ── */
+    canvas{max-height:150px}
 
-    /* ── vessel info popup ── */
-    #vessel-popup{display:none;position:fixed;bottom:20px;left:360px;background:var(--card);border:1px solid var(--accent);border-radius:8px;padding:14px;z-index:2000;min-width:200px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
-    #vessel-popup .close{position:absolute;top:6px;right:10px;cursor:pointer;color:var(--muted);font-size:16px}
+    /* ── India map overlay label ── */
+    .map-label{position:absolute;z-index:500;background:rgba(13,17,23,.85);border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:11px;font-weight:600;color:var(--text);pointer-events:none}
 
-    .leaflet-container{background:#0d1117}
+    .leaflet-container{background:#0a0e14}
+    .leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border-color:var(--border)!important}
   </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">🚢 Port <span>Pulse</span> <span style="font-size:11px;color:var(--muted);font-weight:400">Real-Time</span></div>
-  <div class="header-right">
-    <span id="ais-status"><span class="live-dot"></span> Connecting...</span>
-    <span id="wx-status">● mock mode</span>
+  <div class="logo">🇮🇳 Port <span>Pulse</span> <span style="font-size:11px;color:var(--muted);font-weight:400">India Live</span></div>
+  <div class="hright">
+    <div id="ais-dot"><span class="pulse"></span> <span id="ais-txt">Connecting...</span></div>
+    <span style="font-size:11px;color:var(--muted)" id="wx-status">● mock mode</span>
     <span class="badge">IBM Bob Hackathon 2026</span>
   </div>
 </header>
 
-<!-- Port selector bar -->
-<div class="port-bar" id="port-bar">
-  <span style="font-size:11px;color:var(--muted);white-space:nowrap">Select Port:</span>
-</div>
+<div class="layout">
 
-<div class="main-layout">
+  <!-- LEFT — India summary + port cards -->
+  <div class="left">
+    <div class="left-inner">
 
-  <!-- LEFT — Stats + Terminals + Vessel List -->
-  <div class="sidebar">
-    <div class="sidebar-inner">
-
-      <!-- Stats -->
-      <div class="stat-row">
-        <div class="stat"><div class="lbl">Live Vessels</div><div class="val c-acc" id="s-total">—</div></div>
-        <div class="stat"><div class="lbl">Anchored</div><div class="val c-high" id="s-anchored">—</div></div>
-        <div class="stat"><div class="lbl">Moving</div><div class="val c-med" id="s-moving">—</div></div>
-        <div class="stat"><div class="lbl">Critical Terms.</div><div class="val c-crit" id="s-critical">—</div></div>
+      <div class="stat-grid">
+        <div class="stat"><div class="lbl">Total Ships</div><div class="val" style="color:var(--accent)" id="s-total">—</div></div>
+        <div class="stat"><div class="lbl">Moving</div><div class="val" style="color:var(--medium)" id="s-moving">—</div></div>
+        <div class="stat"><div class="lbl">Anchored</div><div class="val" style="color:var(--high)" id="s-anchored">—</div></div>
+        <div class="stat"><div class="lbl">Ports Active</div><div class="val" style="color:var(--accent)" id="s-ports">6</div></div>
       </div>
 
-      <!-- Terminal Congestion -->
-      <div class="sec">Terminal Congestion</div>
-      <div id="terminal-cards"><div style="color:var(--muted);font-size:12px">Loading...</div></div>
+      <div class="sec">Port Congestion — All India</div>
+      <div id="port-cards"><div style="color:var(--muted);font-size:11px">Loading...</div></div>
 
-      <!-- Vessel list -->
-      <div class="sec">Live Vessels <span id="vessel-count" style="color:var(--accent)"></span></div>
-      <div id="vessel-list"><div style="color:var(--muted);font-size:12px">Waiting for AIS data...</div></div>
+      <div class="sec">Live Vessel Feed <span id="v-count" style="color:var(--accent)"></span></div>
+      <div id="vessel-list"><div style="color:var(--muted);font-size:11px">Waiting for data...</div></div>
 
     </div>
   </div>
 
-  <!-- MAP -->
+  <!-- MAP — All India -->
   <div id="map"></div>
 
-  <!-- RIGHT — Chart + Plan -->
-  <div class="right-panel">
+  <!-- RIGHT — Chart + AI Plan -->
+  <div class="right">
     <div class="right-inner">
 
-      <div class="sec">Congestion Overview</div>
-      <canvas id="congestionChart"></canvas>
+      <div class="sec">Fleet Distribution</div>
+      <canvas id="fleetChart"></canvas>
 
-      <div class="sec" style="margin-top:16px">AI Operations Plan
-        <span style="color:var(--accent);font-size:9px">(watsonx.ai)</span>
+      <div class="sec" style="margin-top:14px">Congestion by Port</div>
+      <canvas id="congChart"></canvas>
+
+      <div class="sec" style="margin-top:14px">AI Operations Plan
+        <span style="color:var(--accent);font-size:9px"> watsonx.ai</span>
       </div>
-      <button class="btn" onclick="loadPlan()" id="plan-btn">Generate 72-Hour Plan</button>
-      <div id="plan-box">Click above to generate an AI-powered operations plan for this port.</div>
+      <button class="btn" id="plan-btn" onclick="genPlan()">Generate All-India Plan</button>
+      <div id="plan-box">Click above for an AI-powered operations plan covering all Indian ports.</div>
 
     </div>
   </div>
 
-</div>
-
-<!-- Vessel popup -->
-<div id="vessel-popup">
-  <span class="close" onclick="document.getElementById('vessel-popup').style.display='none'">✕</span>
-  <div id="popup-content"></div>
 </div>
 
 <script>
 const API = '';
-const WS_URL = `ws://${location.host}/ws`;
+const WS  = `ws://${location.host}/ws`;
+
+// Port colours
+const PORT_COLORS = {
+  JNPT:    '#388bfd',
+  MUNDRA:  '#3fb950',
+  CHENNAI: '#d29922',
+  VIZAG:   '#f85149',
+  COCHIN:  '#a371f7',
+  KOLKATA: '#39d353',
+};
+
+// Port centre coordinates
+const PORT_CENTERS = {
+  JNPT:    [18.9500, 72.9500],
+  MUNDRA:  [22.8390, 69.7050],
+  CHENNAI: [13.0900, 80.2990],
+  VIZAG:   [17.6868, 83.2985],
+  COCHIN:  [9.9658,  76.2673],
+  KOLKATA: [22.5726, 88.3639],
+};
 
 // State
-let vessels = {};       // mmsi -> vessel
-let markers = {};       // mmsi -> leaflet marker
-let paths = {};         // mmsi -> leaflet polyline
-let vesselTrails = {};  // mmsi -> [[lat,lon], ...]
-let map, cChart;
-let activePort = 'JNPT';
-let ports = [];
+let vessels = {};     // mmsi -> vessel
+let markers = {};     // mmsi -> L.marker
+let trails  = {};     // mmsi -> L.polyline
+let trailPts= {};     // mmsi -> [[lat,lon],...]
+let portCongestion = {};
+let map, fleetChart, congChart;
+let ws, wsTimer;
+let allPorts = [];
+let activePortFilter = null; // null = show all
 
-// ── Map setup ──────────────────────────────────────────────────────────────
-function initMap(lat, lon) {
-  if (map) { map.setView([lat, lon], 12); return; }
-  map = L.map('map', { zoomControl: true }).setView([lat, lon], 12);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CARTO',
-    maxZoom: 19
+// ── Map init ──────────────────────────────────────────────────────────────
+function initMap() {
+  map = L.map('map', {zoomControl:true}).setView([20.5, 79.0], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap © CARTO', maxZoom:18
   }).addTo(map);
-}
 
-// ── Ship icon ──────────────────────────────────────────────────────────────
-function shipIcon(speed, heading) {
-  const color = speed <= 0.5 ? '#d29922' : '#3fb950';
-  const rot = heading || 0;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 20 28">
-    <g transform="rotate(${rot},10,14)">
-      <polygon points="10,0 18,24 10,20 2,24" fill="${color}" stroke="#000" stroke-width="1.5" opacity="0.9"/>
-    </g>
-  </svg>`;
-  return L.divIcon({
-    html: svg,
-    className: '',
-    iconSize: [20, 28],
-    iconAnchor: [10, 14]
+  // Port label markers
+  Object.entries(PORT_CENTERS).forEach(([key, [lat, lon]]) => {
+    const col = PORT_COLORS[key] || '#888';
+    const icon = L.divIcon({
+      html: `<div style="background:${col};color:#fff;font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;white-space:nowrap;opacity:0.85">${key}</div>`,
+      className:'', iconAnchor:[0,0]
+    });
+    L.marker([lat, lon], {icon, interactive:false}).addTo(map);
   });
 }
 
-// ── Update/add vessel marker ───────────────────────────────────────────────
-function updateVesselOnMap(v) {
-  const lat = v.lat, lon = v.lon, mmsi = v.mmsi;
-  if (!lat || !lon) return;
+// ── Ship icon ──────────────────────────────────────────────────────────────
+function shipIcon(v) {
+  const port  = v.port || 'JNPT';
+  const color = v.speed > 0.3 ? (PORT_COLORS[port] || '#3fb950') : '#d29922';
+  const rot   = v.heading || 0;
+  const size  = v.speed > 0.3 ? 18 : 14;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${Math.round(size*1.4)}" viewBox="0 0 20 28">
+    <g transform="rotate(${rot},10,14)">
+      <polygon points="10,0 18,24 10,20 2,24" fill="${color}" stroke="#000" stroke-width="1.5" opacity="0.9"/>
+    </g></svg>`;
+  return L.divIcon({html:svg, className:'', iconSize:[size, Math.round(size*1.4)], iconAnchor:[size/2, Math.round(size*0.7)]});
+}
+
+// ── Add / update vessel on map ─────────────────────────────────────────────
+function putVesselOnMap(v) {
+  if (!v.lat || !v.lon) return;
+  const mmsi = v.mmsi;
 
   // Trail
-  if (!vesselTrails[mmsi]) vesselTrails[mmsi] = [];
-  vesselTrails[mmsi].push([lat, lon]);
-  if (vesselTrails[mmsi].length > 30) vesselTrails[mmsi].shift();
-
-  // Update path
-  if (paths[mmsi]) {
-    map.removeLayer(paths[mmsi]);
+  if (!trailPts[mmsi]) trailPts[mmsi] = [];
+  const last = trailPts[mmsi].slice(-1)[0];
+  if (!last || Math.abs(last[0]-v.lat) > 0.0001 || Math.abs(last[1]-v.lon) > 0.0001) {
+    trailPts[mmsi].push([v.lat, v.lon]);
+    if (trailPts[mmsi].length > 40) trailPts[mmsi].shift();
   }
-  if (vesselTrails[mmsi].length > 1) {
-    paths[mmsi] = L.polyline(vesselTrails[mmsi], {
-      color: v.speed <= 0.5 ? '#d29922' : '#388bfd',
-      weight: 1.5,
-      opacity: 0.5,
-      dashArray: '4,4'
+  if (trails[mmsi]) map.removeLayer(trails[mmsi]);
+  if (trailPts[mmsi].length > 1) {
+    trails[mmsi] = L.polyline(trailPts[mmsi], {
+      color: PORT_COLORS[v.port] || '#388bfd',
+      weight:1.5, opacity:0.4, dashArray:'3,4'
     }).addTo(map);
   }
 
   // Marker
-  const icon = shipIcon(v.speed, v.heading);
+  const icon = shipIcon(v);
   if (markers[mmsi]) {
-    markers[mmsi].setLatLng([lat, lon]).setIcon(icon);
-    markers[mmsi]._popup && markers[mmsi]._popup.setContent(popupHtml(v));
+    markers[mmsi].setLatLng([v.lat, v.lon]).setIcon(icon);
   } else {
-    const m = L.marker([lat, lon], { icon })
+    const m = L.marker([v.lat, v.lon], {icon, zIndexOffset: v.speed>0.3?100:0})
       .addTo(map)
-      .bindPopup(popupHtml(v), { maxWidth: 220 });
-    m.on('click', () => showVesselCard(v));
+      .bindPopup(makePopup(v), {maxWidth:200});
+    m.on('click', () => { m.openPopup(); zoomToVessel(v); });
     markers[mmsi] = m;
   }
+  // Update popup content live
+  markers[mmsi]._popup && markers[mmsi]._popup.setContent(makePopup(v));
 }
 
-function popupHtml(v) {
-  const status = v.speed <= 0.5 ? '⚓ Anchored' : `🟢 Moving ${v.speed} kn`;
-  return `<div style="font-family:system-ui;font-size:12px;color:#1f2328">
-    <b>${v.name || 'Unknown'}</b><br>
+function makePopup(v) {
+  const spd  = v.speed <= 0.3 ? '⚓ Anchored' : `▶ ${v.speed} kn`;
+  const port = v.port || '';
+  const col  = PORT_COLORS[port] || '#888';
+  return `<div style="font-size:12px;color:#1f2328">
+    <b style="color:${col}">${v.name||'Unknown'}</b><br>
     MMSI: ${v.mmsi}<br>
-    ${status}<br>
-    Heading: ${v.heading || 0}°
+    Port: ${port}<br>
+    ${spd} | Hdg: ${v.heading||0}°<br>
+    Type: ${v.type||'—'}
   </div>`;
 }
 
-function showVesselCard(v) {
-  const status = v.speed <= 0.5 ? '⚓ Anchored' : `🟢 Moving ${v.speed} kn`;
-  document.getElementById('popup-content').innerHTML = `
-    <div style="font-size:13px;font-weight:700;margin-bottom:6px">${v.name || 'Unknown Vessel'}</div>
-    <div style="font-size:11px;color:#8b949e">MMSI: ${v.mmsi}</div>
-    <div style="font-size:12px;margin-top:6px">${status}</div>
-    <div style="font-size:11px;color:#8b949e">Lat: ${v.lat?.toFixed(4)} | Lon: ${v.lon?.toFixed(4)}</div>
-    <div style="font-size:11px;color:#8b949e">Heading: ${v.heading || 0}° | Type: ${v.type || '—'}</div>
-    ${v.destination ? `<div style="font-size:11px;color:#8b949e">Dest: ${v.destination}</div>` : ''}
-  `;
-  document.getElementById('vessel-popup').style.display = 'block';
+function zoomToVessel(v) {
+  map.flyTo([v.lat, v.lon], 13, {duration:1.2});
 }
 
 // ── WebSocket ──────────────────────────────────────────────────────────────
-let ws, wsReconnectTimer;
-
 function connectWS() {
-  ws = new WebSocket(WS_URL);
-
+  ws = new WebSocket(WS);
   ws.onopen = () => {
-    document.getElementById('ais-status').innerHTML = '<span class="live-dot"></span> Live AIS';
-    document.getElementById('ais-status').style.color = '#3fb950';
-    clearTimeout(wsReconnectTimer);
+    document.getElementById('ais-txt').textContent = 'Live AIS';
+    document.getElementById('ais-dot').querySelector('.pulse').style.background = '#3fb950';
+    // Ask backend to load ALL ports — we override per-port filtering client-side
+    clearTimeout(wsTimer);
   };
-
-  ws.onmessage = (e) => {
+  ws.onmessage = e => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'snapshot') {
-      msg.data.forEach(v => { vessels[v.mmsi] = v; updateVesselOnMap(v); });
-      refreshSidebar();
+      msg.data.forEach(v => { vessels[v.mmsi]=v; putVesselOnMap(v); });
+      refreshAll();
     } else if (msg.type === 'vessel_update') {
-      const v = msg.data;
-      vessels[v.mmsi] = v;
-      updateVesselOnMap(v);
-      updateVesselInList(v);
-      updateSummaryCount();
+      vessels[msg.data.mmsi] = msg.data;
+      putVesselOnMap(msg.data);
+      scheduleListRefresh();
     } else if (msg.type === 'heartbeat') {
-      document.getElementById('s-total').textContent = msg.vessels;
-    } else if (msg.type === 'port_switched') {
-      const p = msg.data.port;
-      map.setView([p.lat, p.lon], 12);
-      vessels = {}; markers = {}; paths = {}; vesselTrails = {};
-      map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline) map.removeLayer(l); });
-      refreshSidebar();
+      updateStats();
     }
   };
-
   ws.onclose = () => {
-    document.getElementById('ais-status').innerHTML = '<span style="color:#f85149">● Disconnected</span>';
-    wsReconnectTimer = setTimeout(connectWS, 3000);
+    document.getElementById('ais-txt').textContent = 'Reconnecting...';
+    document.getElementById('ais-dot').querySelector('.pulse').style.background = '#f85149';
+    wsTimer = setTimeout(connectWS, 3000);
   };
-
   ws.onerror = () => ws.close();
 }
 
-// ── Sidebar ────────────────────────────────────────────────────────────────
-function refreshSidebar() {
-  updateSummaryCount();
+// ── Refresh all UI ─────────────────────────────────────────────────────────
+function refreshAll() {
+  updateStats();
   renderVesselList();
-  loadCongestion();
+  loadAllCongestion();
 }
 
-function updateSummaryCount() {
-  const list = Object.values(vessels);
-  const moving   = list.filter(v => v.speed > 0.5).length;
-  const anchored = list.filter(v => v.speed <= 0.5).length;
-  document.getElementById('s-total').textContent    = list.length;
-  document.getElementById('s-moving').textContent   = moving;
-  document.getElementById('s-anchored').textContent = anchored;
-  document.getElementById('vessel-count').textContent = `(${list.length})`;
+let _listTimer = null;
+function scheduleListRefresh() {
+  updateStats();
+  if (!_listTimer) _listTimer = setTimeout(() => { renderVesselList(); _listTimer = null; }, 4000);
 }
 
+function updateStats() {
+  const all  = Object.values(vessels);
+  const show = activePortFilter ? all.filter(v=>v.port===activePortFilter) : all;
+  document.getElementById('s-total').textContent    = show.length;
+  document.getElementById('s-moving').textContent   = show.filter(v=>v.speed>0.3).length;
+  document.getElementById('s-anchored').textContent = show.filter(v=>v.speed<=0.3).length;
+  document.getElementById('v-count').textContent    = `(${show.length})`;
+}
+
+// ── Vessel list ────────────────────────────────────────────────────────────
 function renderVesselList() {
-  const list = Object.values(vessels).sort((a,b) => b.speed - a.speed);
+  const all  = Object.values(vessels);
+  const list = activePortFilter ? all.filter(v=>v.port===activePortFilter) : all;
+  list.sort((a,b)=>(b.speed>0.3?1:0)-(a.speed>0.3?1:0));
   const el = document.getElementById('vessel-list');
-  if (!list.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">No vessels detected yet — waiting for AIS data...</div>'; return; }
-  el.innerHTML = list.slice(0, 30).map(v => {
-    const cls = v.speed <= 0.5 ? 'anchored' : 'moving';
-    const status = v.speed <= 0.5 ? `⚓ Anchored` : `▶ ${v.speed} kn`;
-    return `<div class="v-item ${cls}" onclick="flyToVessel('${v.mmsi}')">
-      <div style="display:flex;justify-content:space-between">
-        <div class="v-name">${v.name || 'Unknown'}</div>
-        <div class="v-speed" style="color:${v.speed<=0.5?'var(--high)':'var(--medium)'}">${status}</div>
+  if (!list.length) { el.innerHTML='<div style="color:var(--muted);font-size:11px">No vessels...</div>'; return; }
+  el.innerHTML = list.slice(0,40).map(v => {
+    const mov   = v.speed > 0.3;
+    const badge = mov ? `<span class="v-badge vb-moving">▶ ${v.speed}kn</span>` : `<span class="v-badge vb-anchored">⚓</span>`;
+    const col   = PORT_COLORS[v.port] || '#888';
+    return `<div class="v-item ${mov?'moving':'anchored'}" onclick="flyTo('${v.mmsi}')">
+      <div>
+        <div class="v-name" style="color:${col}">${v.name||'Unknown'}</div>
+        <div class="v-meta">${v.port} · ${v.type||'Vessel'}</div>
       </div>
-      <div class="v-meta">MMSI: ${v.mmsi} | Hdg: ${v.heading||0}°</div>
+      ${badge}
     </div>`;
   }).join('');
 }
 
-function updateVesselInList(v) {
-  // Debounce full re-render every 5 seconds
-  if (!updateVesselInList._timer) {
-    updateVesselInList._timer = setTimeout(() => {
-      renderVesselList();
-      updateVesselInList._timer = null;
-    }, 5000);
-  }
-}
-
-function flyToVessel(mmsi) {
+function flyTo(mmsi) {
   const v = vessels[mmsi];
   if (!v) return;
-  map.flyTo([v.lat, v.lon], 14, { duration: 1 });
-  showVesselCard(v);
+  map.flyTo([v.lat, v.lon], 13, {duration:1});
+  markers[mmsi] && markers[mmsi].openPopup();
 }
 
-// ── Terminal congestion ────────────────────────────────────────────────────
-async function loadCongestion() {
+// ── Congestion for ALL ports ───────────────────────────────────────────────
+async function loadAllCongestion() {
   try {
-    const data = await fetch(`${API}/api/congestion`).then(r => r.json());
-    renderTerminalCards(data);
-    renderCongestionChart(data);
-    const crit = data.filter(t => t.congestion_level === 'CRITICAL').length;
-    document.getElementById('s-critical').textContent = crit;
-  } catch(e) {}
+    // Score each port using local vessel data
+    const portKeys = ['JNPT','MUNDRA','CHENNAI','VIZAG','COCHIN','KOLKATA'];
+    const results  = {};
+    portKeys.forEach(pk => {
+      const pvessels = Object.values(vessels).filter(v=>v.port===pk);
+      results[pk] = scorePort(pk, pvessels);
+    });
+    portCongestion = results;
+    renderPortCards(results);
+    renderCharts(results);
+  } catch(e){}
 }
 
-function congColor(level) {
-  return {CRITICAL:'#f85149',HIGH:'#d29922',MEDIUM:'#3fb950',LOW:'#58a6ff'}[level]||'#8b949e';
+function scorePort(portKey, pvessels) {
+  const anchored   = pvessels.filter(v=>v.speed<=0.3).length;
+  const moving     = pvessels.filter(v=>v.speed>0.3).length;
+  const total      = pvessels.length;
+
+  const density    = Math.min(total * 8, 40);
+  const anchorScore= Math.min(anchored * 10, 35);
+  const moveScore  = Math.min(moving * 4, 15);
+  const score      = Math.min(Math.round(density + anchorScore + moveScore), 100);
+
+  const level = score>=76?'CRITICAL':score>=56?'HIGH':score>=31?'MEDIUM':'LOW';
+  return { port:portKey, score, level, total, anchored, moving };
 }
 
-function renderTerminalCards(data) {
-  document.getElementById('terminal-cards').innerHTML = data.map(t => {
-    const col = congColor(t.congestion_level);
-    return `<div class="t-card ${t.congestion_level}">
-      <div class="t-header">
-        <div class="t-name">${t.terminal}</div>
-        <div class="t-score" style="color:${col}">${t.congestion_score}</div>
+// ── Port cards ────────────────────────────────────────────────────────────
+function cgColor(level){ return {CRITICAL:'#f85149',HIGH:'#d29922',MEDIUM:'#3fb950',LOW:'#58a6ff'}[level]||'#8b949e'; }
+
+function renderPortCards(results) {
+  const sorted = Object.values(results).sort((a,b)=>b.score-a.score);
+  document.getElementById('port-cards').innerHTML = sorted.map(r => {
+    const col   = cgColor(r.level);
+    const pCol  = PORT_COLORS[r.port] || '#888';
+    const isAct = activePortFilter === r.port;
+    return `<div class="port-card ${r.level} ${isAct?'active':''}" onclick="filterPort('${r.port}')">
+      <div class="pc-header">
+        <div class="pc-name" style="color:${pCol}">${r.port}</div>
+        <div class="pc-score" style="color:${col}">${r.score}</div>
       </div>
-      <span class="pill pill-${t.congestion_level}">${t.congestion_level}</span>
-      <div class="bar-bg"><div class="bar" style="width:${t.congestion_score}%;background:${col}"></div></div>
-      <div class="t-stats">
-        <div class="t-stat"><div class="k">Vessels</div><div class="v">${t.vessels_incoming}</div></div>
-        <div class="t-stat"><div class="k">Anchored</div><div class="v" style="color:${t.vessels_anchored>0?'var(--high)':'var(--muted)'}">${t.vessels_anchored}</div></div>
-        <div class="t-stat"><div class="k">Queue wait</div><div class="v">${t.estimated_wait_hours}h</div></div>
-        <div class="t-stat"><div class="k">Utilization</div><div class="v">${t.utilization_pct}%</div></div>
+      <span class="pill pill-${r.level}">${r.level}</span>
+      <div class="pc-bar-bg"><div class="pc-bar" style="width:${r.score}%;background:${col}"></div></div>
+      <div class="pc-stats">
+        <div class="pc-stat"><div class="k">Ships</div><div class="v">${r.total}</div></div>
+        <div class="pc-stat"><div class="k">Moving</div><div class="v" style="color:var(--medium)">${r.moving}</div></div>
+        <div class="pc-stat"><div class="k">Anchored</div><div class="v" style="color:var(--high)">${r.anchored}</div></div>
       </div>
-      <div class="t-action">${t.recommended_action}</div>
     </div>`;
   }).join('');
 }
 
-function renderCongestionChart(data) {
-  if (cChart) cChart.destroy();
-  cChart = new Chart(document.getElementById('congestionChart'), {
-    type: 'bar',
-    data: {
-      labels: data.map(t => t.terminal.replace('Terminal ','T-').replace('International Container Transshipment Terminal','ICTT')),
-      datasets:[{
-        label:'Congestion',
-        data: data.map(t => t.congestion_score),
-        backgroundColor: data.map(t => congColor(t.congestion_level)),
-        borderRadius: 4,
-      }]
-    },
+function filterPort(pk) {
+  if (activePortFilter === pk) {
+    activePortFilter = null; // toggle off = show all
+    map.setView([20.5, 79.0], 5);
+  } else {
+    activePortFilter = pk;
+    const c = PORT_CENTERS[pk];
+    if (c) map.flyTo(c, 11, {duration:1.2});
+  }
+  updateStats();
+  renderVesselList();
+  renderPortCards(portCongestion);
+  // Show/hide markers
+  Object.values(vessels).forEach(v => {
+    const m = markers[v.mmsi];
+    if (!m) return;
+    if (!activePortFilter || v.port === activePortFilter) {
+      map.hasLayer(m) || m.addTo(map);
+    } else {
+      map.hasLayer(m) && map.removeLayer(m);
+    }
+  });
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────
+function renderCharts(results) {
+  const ports  = Object.keys(PORT_COLORS);
+  const counts = ports.map(p => Object.values(vessels).filter(v=>v.port===p).length);
+  const colors = ports.map(p => PORT_COLORS[p]);
+
+  if (fleetChart) fleetChart.destroy();
+  fleetChart = new Chart(document.getElementById('fleetChart'),{
+    type:'doughnut',
+    data:{labels:ports, datasets:[{data:counts, backgroundColor:colors, borderColor:'#0d1117', borderWidth:2}]},
+    options:{plugins:{legend:{labels:{color:'#8b949e',font:{size:9}}}}, cutout:'60%'}
+  });
+
+  const scores = ports.map(p => results[p]?.score||0);
+  const sColors= ports.map(p => cgColor(results[p]?.level||'LOW'));
+  if (congChart) congChart.destroy();
+  congChart = new Chart(document.getElementById('congChart'),{
+    type:'bar',
+    data:{labels:ports, datasets:[{data:scores, backgroundColor:sColors, borderRadius:4}]},
     options:{
       scales:{
-        x:{ticks:{color:'#8b949e',font:{size:9}},grid:{color:'#21262d'}},
-        y:{min:0,max:100,ticks:{color:'#8b949e'},grid:{color:'#21262d'}}
+        x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},
+        y:{min:0,max:100,ticks:{color:'#8b949e',font:{size:9}},grid:{color:'#21262d'}}
       },
       plugins:{legend:{display:false}}
     }
@@ -427,75 +465,54 @@ function renderCongestionChart(data) {
 }
 
 // ── AI Plan ────────────────────────────────────────────────────────────────
-async function loadPlan() {
+async function genPlan() {
   const btn = document.getElementById('plan-btn');
   const box = document.getElementById('plan-box');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Generating...';
-  box.textContent = 'Calling IBM watsonx.ai...';
+  box.textContent = 'Calling IBM watsonx.ai for all-India analysis...';
   try {
-    const data = await fetch(`${API}/api/plan`).then(r => r.json());
-    box.textContent = data.plan_text;
-  } catch(e) {
-    box.textContent = 'Error connecting to backend.';
-  }
+    const d = await fetch(`${API}/api/plan`).then(r=>r.json());
+    box.textContent = d.plan_text;
+  } catch { box.textContent = 'Error: backend not responding.'; }
   btn.disabled = false;
-  btn.textContent = 'Regenerate Plan';
+  btn.textContent = 'Regenerate All-India Plan';
 }
 
-// ── Port selector ──────────────────────────────────────────────────────────
-async function loadPorts() {
-  ports = await fetch(`${API}/api/ports`).then(r => r.json());
-  const bar = document.getElementById('port-bar');
-  bar.innerHTML = '<span style="font-size:11px;color:var(--muted);white-space:nowrap">Select Port:</span>';
-  ports.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'port-btn' + (p.key === activePort ? ' active' : '');
-    btn.textContent = p.name.split('(')[0].trim().split(' ').slice(0,2).join(' ');
-    btn.title = `${p.name} — ${p.city}`;
-    btn.onclick = () => switchPort(p.key);
-    bar.appendChild(btn);
-  });
-}
-
-async function switchPort(key) {
-  activePort = key;
-  // Update buttons
-  document.querySelectorAll('.port-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  // Tell backend
-  await fetch(`${API}/api/ports/${key}`, { method: 'POST' });
-  // Tell WebSocket
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'switch_port', port_key: key }));
-  }
-  // Update map center
-  const p = ports.find(x => x.key === key);
-  if (p) map.setView([p.lat, p.lon], 12);
-  vessels = {}; markers = {}; paths = {}; vesselTrails = {};
-}
-
-// ── Health check ──────────────────────────────────────────────────────────
+// ── Health ────────────────────────────────────────────────────────────────
 async function checkHealth() {
   try {
-    const d = await fetch(`${API}/api/health`).then(r => r.json());
+    const d = await fetch(`${API}/api/health`).then(r=>r.json());
     const el = document.getElementById('wx-status');
-    el.style.color = d.watsonx_mode === 'live' ? '#3fb950' : '#d29922';
-    el.textContent = d.watsonx_mode === 'live' ? '● watsonx live' : '● mock mode';
+    el.style.color = d.watsonx_mode==='live'?'#3fb950':'#d29922';
+    el.textContent  = d.watsonx_mode==='live'?'● watsonx live':'● mock mode';
   } catch {}
 }
 
-// ── Refresh congestion every 30 seconds ───────────────────────────────────
-setInterval(loadCongestion, 30000);
+// ── Load ALL port seeds on startup ────────────────────────────────────────
+async function loadAllPorts() {
+  // Switch backend through all ports to seed their vessels
+  const ports = ['JNPT','MUNDRA','CHENNAI','VIZAG','COCHIN','KOLKATA'];
+  for (const pk of ports) {
+    try {
+      const r = await fetch(`${API}/api/ports/${pk}`, {method:'POST'}).then(r=>r.json());
+      // Get vessels for this port and merge
+      const pvessels = await fetch(`${API}/api/vessels`).then(r=>r.json());
+      pvessels.forEach(v => { vessels[v.mmsi]=v; putVesselOnMap(v); });
+      await new Promise(r => setTimeout(r, 300));
+    } catch(e) {}
+  }
+  refreshAll();
+}
 
-// ── Init ───────────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────
 (async () => {
-  initMap(18.95, 72.95);   // Default: JNPT
-  await loadPorts();
+  initMap();
   checkHealth();
+  await loadAllPorts();
   connectWS();
-  // Initial congestion load
-  setTimeout(loadCongestion, 3000);
+  setInterval(loadAllCongestion, 15000);
+  setInterval(checkHealth, 60000);
 })();
 </script>
 </body>
