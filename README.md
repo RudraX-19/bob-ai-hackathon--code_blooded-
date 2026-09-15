@@ -86,17 +86,17 @@ Port Pulse is an AI-powered web dashboard that ingests vessel schedules and bert
 git clone https://github.com/RudraX-19/bob-ai-hackathon--code_blooded-.git
 cd bob-ai-hackathon--code_blooded-
 
-# 2. Install dependencies
+# 2. Install dependencies (Requires Python 3.10+)
 cd src
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env — set MOCK_MODE=true to run without a real watsonx.ai key
+# Optional: Set MOCK_MODE=true in .env if you don't have a live WatsonX key
 
-# 4. Run the project
+# 4. Run the project backend & frontend together
 cd backend
-uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8000
 ```
 
 Open **http://localhost:8000** in your browser.
