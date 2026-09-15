@@ -2,6 +2,12 @@
 
 ![Port Pulse Live Dashboard](demo/screenshots/live-demo.png)
 
+*Top: Desktop Dashboard | Bottom: Tablet & Mobile Responsive Interfaces*
+<p align="center">
+  <img src="demo/screenshots/live-demo-tablet.png" alt="Tablet View" width="45%">
+  <img src="demo/screenshots/live-demo-mobile.png" alt="Mobile View" width="45%">
+</p>
+
 > ⚠️ **Replace everything in `[ ]` brackets with your actual content before submission.**
 
 ---
